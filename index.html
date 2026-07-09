@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VigiÁgua — Acesso ao Sistema</title>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    body {
+      background: var(--gradient-header);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .login-wrapper {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .login-brand {
+      text-align: center;
+      margin-bottom: 32px;
+      color: #fff;
+    }
+
+    .login-brand__icon {
+      width: 72px;
+      height: 72px;
+      background: rgba(255,255,255,.15);
+      border: 2px solid rgba(255,255,255,.3);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin: 0 auto 16px;
+      backdrop-filter: blur(4px);
+    }
+
+    .login-brand__title {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .login-brand__sub {
+      font-size: 13px;
+      opacity: .75;
+    }
+
+    .login-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.3);
+    }
+
+    .login-card__title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--slate-800);
+      margin-bottom: 24px;
+    }
+
+    .login-form .form-group {
+      margin-bottom: 16px;
+    }
+
+    .input-icon-wrap {
+      position: relative;
+    }
+
+    .input-icon-wrap input {
+      padding-left: 40px;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      color: var(--slate-400);
+      pointer-events: none;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 13px;
+      font-size: 15px;
+      margin-top: 8px;
+    }
+
+    .login-error {
+      background: var(--red-50);
+      border: 1px solid var(--red-200);
+      color: var(--red-700);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .login-error.show { display: block; }
+
+    .login-demo {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--slate-100);
+    }
+
+    .login-demo__title {
+      font-size: 11.5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--slate-400);
+      margin-bottom: 10px;
+    }
+
+    .demo-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--slate-100);
+      border: 1px solid var(--slate-200);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      margin: 3px;
+      transition: background .2s;
+      color: var(--slate-700);
+    }
+
+    .demo-chip:hover { background: var(--blue-50); border-color: var(--blue-200); color: var(--blue-700); }
+    .demo-chip .chip-icon { font-size: 13px; }
+
+    .login-footer {
+      text-align: center;
+      margin-top: 24px;
+      color: rgba(255,255,255,.5);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="login-brand">
+      <div class="login-brand__icon">💧</div>
+      <div class="login-brand__title">VigiÁgua</div>
+      <div class="login-brand__sub">Sistema de Planejamento de Coletas — 12ª RS</div>
+    </div>
+
+    <div class="login-card">
+      <div class="login-card__title">Entrar no sistema</div>
+
+      <div class="login-error" id="loginError"></div>
+
+      <div class="login-form">
+        <div class="form-group">
+          <label for="email">E-mail</label>
+          <div class="input-icon-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" id="email" placeholder="seu@email.com" autocomplete="username">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="senha">Senha</label>
+          <div class="input-icon-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="senha" placeholder="••••••••" autocomplete="current-password">
+          </div>
+        </div>
+        <button class="btn btn--primary login-btn" id="btnLogin" onclick="fazerLogin()">
+          Entrar
+        </button>
+      </div>
+
+      <div class="login-demo">
+        <div class="login-demo__title">Acesso rápido (demonstração)</div>
+        <div>
+          <span class="demo-chip" onclick="preencherDemo('regional')">
+            <span class="chip-icon">🏛️</span> Regional
+          </span>
+          <span class="demo-chip" onclick="preencherDemo('umuarama')">
+            <span class="chip-icon">🏘️</span> Umuarama
+          </span>
+          <span class="demo-chip" onclick="preencherDemo('altonia')">
+            <span class="chip-icon">🏘️</span> Altônia
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="login-footer">
+      VigiÁgua — Programa de Vigilância da Qualidade da Água · 12ª Regional de Saúde do Paraná
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase-config.js"></script>
+  <script src="js/data.js"></script>
+  <script>
+    // Redirecionar se já logado
+    const s = DB.Auth.sessaoAtual();
+    if (s) redirectPerfil(s.perfil);
+
+    async function fazerLogin() {
+      const email = document.getElementById('email').value.trim();
+      const senha = document.getElementById('senha').value;
+      const err   = document.getElementById('loginError');
+
+      err.classList.remove('show');
+
+      if (!email || !senha) {
+        err.textContent = 'Preencha e-mail e senha.';
+        err.classList.add('show');
+        return;
+      }
+
+      const btn = document.getElementById('btnLogin');
+      btn.disabled = true; btn.textContent = 'Entrando…';
+      const res = await DB.Auth.loginAsync(email, senha);
+      btn.disabled = false; btn.textContent = 'Entrar';
+      if (!res.ok) {
+        err.textContent = res.erro;
+        err.classList.add('show');
+        document.getElementById('senha').focus();
+        return;
+      }
+
+      redirectPerfil(res.sessao.perfil);
+    }
+
+    function redirectPerfil(perfil) {
+      window.location.href = perfil === 'regional' ? 'planner.html' : 'municipio.html';
+    }
+
+    function preencherDemo(tipo) {
+      const demos = {
+        regional: { email: 'regional@vigiagua.pr.gov.br', senha: 'regional123' },
+        umuarama: { email: 'umuarama@vigiagua.pr.gov.br', senha: 'municipio123' },
+        altonia:  { email: 'altonia@vigiagua.pr.gov.br',  senha: 'municipio123' },
+      };
+      const d = demos[tipo];
+      if (d) {
+        document.getElementById('email').value = d.email;
+        document.getElementById('senha').value = d.senha;
+      }
+    }
+
+    // Enter para logar
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') fazerLogin();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,2124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VigiÁgua — Plano de Amostragem</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    /* ── Stepper ───────────────────────────── */
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 28px;
+      overflow-x: auto;
+      padding: 4px 0;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--slate-100);
+      color: var(--slate-500);
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    .step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: -10px;
+      top: 0;
+      bottom: 0;
+      width: 20px;
+      background: var(--slate-100);
+      clip-path: polygon(0 0, 70% 50%, 0 100%);
+      z-index: 1;
+    }
+
+    .step.done { background: var(--green-100); color: var(--green-700); }
+    .step.done::after { background: var(--green-100); }
+
+    .step.active { background: var(--gradient-brand); color: #fff; }
+    .step.active::after { background: var(--blue-600); }
+
+    .step__num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .step.done .step__num { background: var(--green-200); }
+    .step:not(.active):not(.done) .step__num { background: var(--slate-200); color: var(--slate-600); }
+
+    /* ── Cronograma info box ─────────────────── */
+    .cronograma-info {
+      background: var(--blue-50);
+      border: 1px solid var(--blue-200);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13.5px;
+    }
+
+    .cronograma-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--green-100);
+      color: var(--green-700);
+      border: 1px solid var(--green-200);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .no-cronograma {
+      background: var(--amber-50);
+      border: 1px solid var(--amber-200);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 20px;
+      font-size: 13.5px;
+      color: var(--amber-600);
+    }
+
+    /* ── Preview (document) ──────────────────── */
+    .preview-section {
+      background: white;
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-md);
+      padding: 24px;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    .preview-section h1 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .preview-section h2 { font-size: 16px; font-weight: 700; margin: 16px 0 8px; }
+    .preview-section h3 { font-size: 14px; font-weight: 700; margin: 12px 0 6px; }
+    .preview-section p  { font-size: 13.5px; line-height: 1.7; margin-bottom: 8px; }
+    .preview-section ul { font-size: 13.5px; margin: 0 0 8px 20px; line-height: 1.8; }
+
+    .item-editable {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      margin-bottom: 6px;
+      border-radius: 4px;
+      padding: 4px;
+      transition: background .15s;
+    }
+
+    .item-editable:hover { background: var(--blue-50); }
+
+    .drag-handle {
+      color: var(--slate-300);
+      cursor: grab;
+      font-size: 14px;
+      padding: 2px 4px;
+      flex-shrink: 0;
+      user-select: none;
+      line-height: 1.5;
+    }
+
+    .drag-handle:active { cursor: grabbing; }
+
+    .item-editable > *:not(.drag-handle) {
+      flex: 1;
+      outline: none;
+      border-radius: 3px;
+      padding: 2px 4px;
+      min-height: 1.4em;
+      word-break: break-word;
+    }
+
+    .item-editable > *:focus { background: var(--blue-50); box-shadow: 0 0 0 2px var(--blue-300); }
+
+    /* ── Collection table ────────────────────── */
+    .coleta-table-wrapper {
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--slate-200);
+      margin-bottom: 16px;
+    }
+
+    .coleta-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+
+    .coleta-table thead tr { background: var(--slate-800); color: #fff; }
+    .coleta-table th { padding: 9px 10px; text-align: left; font-size: 11px; letter-spacing: .3px; }
+    .coleta-table td { padding: 7px 10px; border-bottom: 1px solid var(--slate-100); vertical-align: middle; }
+    .coleta-table tbody tr:hover { background: var(--blue-50); }
+    .coleta-table tbody tr.zebra-odd { background: var(--slate-50); }
+    .coleta-table tbody tr.linked-row { background: var(--green-50) !important; }
+
+    .coleta-table input[type="text"],
+    .coleta-table input[type="date"] {
+      width: 100%;
+      padding: 5px 8px;
+      border: 1.5px solid var(--slate-200);
+      border-radius: 5px;
+      font-size: 12.5px;
+      background: #fff;
+    }
+
+    .coleta-table input:focus {
+      border-color: var(--blue-500);
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(59,130,246,.12);
+    }
+
+    .coleta-table input:disabled {
+      background: var(--slate-50);
+      color: var(--slate-500);
+    }
+
+    .coleta-table select {
+      padding: 5px 6px;
+      border: 1.5px solid var(--slate-200);
+      border-radius: 5px;
+      font-size: 12px;
+      background: #fff;
+      width: 100%;
+    }
+
+    .coleta-table input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .td-id { font-family: monospace; font-size: 11.5px; white-space: nowrap; color: var(--slate-500); }
+
+    .crit-header-btn {
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      text-decoration: underline dotted;
+    }
+
+    .crit-header-btn:hover { color: var(--blue-300); }
+
+    /* ── Modal criteria ──────────────────────── */
+    #modalCriterios {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,.5);
+      z-index: 600;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    #modalCriterios.visible { display: flex; }
+
+    .modal-criterios-box {
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      width: 100%;
+      max-width: 680px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    .modal-criterios-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--slate-100);
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 1;
+    }
+
+    .modal-criterios-header h3 { font-size: 16px; font-weight: 700; }
+    .modal-criterios-fechar {
+      background: none; border: none; font-size: 20px; cursor: pointer; color: var(--slate-400);
+    }
+
+    .modal-criterios-body { padding: 16px 24px 24px; }
+    .modal-criterios-body table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .modal-criterios-body th { background: var(--slate-800); color: #fff; padding: 9px 12px; text-align: left; font-weight: 600; }
+    .modal-criterios-body td { padding: 8px 12px; border-bottom: 1px solid var(--slate-100); vertical-align: top; }
+    .modal-criterios-body tr:hover td { background: var(--blue-50); }
+    .modal-crit-badge {
+      display: inline-block; font-weight: 700; font-size: 12px;
+      background: var(--blue-100); color: var(--blue-700);
+      border-radius: 4px; padding: 2px 7px; cursor: pointer;
+    }
+    .modal-crit-badge:hover { background: var(--blue-600); color: #fff; }
+    .modal-group-label td { background: var(--slate-100) !important; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; padding: 10px 12px !important; border-bottom: 2px solid var(--blue-300) !important; }
+
+    /* ── Legend panel ────────────────────────── */
+    #criterioLegendaPanel {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      background: white;
+      border: 2px solid var(--blue-500);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: 14px 16px;
+      max-width: 340px;
+      min-width: 240px;
+      font-size: 13px;
+      line-height: 1.6;
+      animation: modalIn .2s ease;
+    }
+
+    #criterioLegendaPanel.visible { display: block; }
+    #criterioLegendaPanel .legenda-codigo { font-weight: 700; font-size: 15px; color: var(--blue-600); margin-bottom: 4px; }
+    #criterioLegendaPanel .legenda-grupo { font-size: 11px; color: var(--slate-400); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    #criterioLegendaPanel .legenda-desc { color: var(--slate-700); }
+    #criterioLegendaPanel .legenda-fechar {
+      position: absolute; top: 8px; right: 10px; background: none; border: none; font-size: 16px; cursor: pointer; color: var(--slate-400);
+    }
+
+    /* ── Preview doc table ────────────────────── */
+    .preview-section table.doc-table { width: 100%; border-collapse: collapse; margin: 12px 0 16px; font-size: 13.5px; }
+    .preview-section table.doc-table caption { caption-side: top; font-weight: 700; padding: 6px 0; text-align: center; }
+    .preview-section table.doc-table th,
+    .preview-section table.doc-table td { border: 1px solid #333; padding: 8px; vertical-align: top; }
+    .preview-section table.doc-table thead th { background: rgba(0,0,0,.06); font-weight: 700; text-align: left; }
+
+    /* ── etapas (sections) ────────────────────── */
+    .etapa { display: none; }
+    .etapa.ativa { display: block; }
+
+    @media (max-width: 768px) {
+      .preview-section { padding: 12px; }
+      .stepper { gap: 2px; }
+      .step { padding: 6px 10px; font-size: 11.5px; }
+    }
+  </style>
+</head>
+<body class="page-wrapper">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <a href="index.html" class="topbar__logo">
+      <div class="topbar__logo-icon">💧</div>
+      VigiÁgua
+    </a>
+    <div class="topbar__title">Plano de Amostragem Municipal</div>
+    <div class="topbar__right">
+      <span class="topbar__user">
+        <span class="topbar__user-badge" id="badgeMun">Município</span>
+        <span id="nomeUsuario">—</span>
+      </span>
+      <button class="topbar__btn" onclick="sair()">🚪 Sair</button>
+    </div>
+  </header>
+
+  <main class="page-content">
+
+    <!-- Stepper -->
+    <div class="stepper" id="stepper">
+      <div class="step active" id="step1"><span class="step__num">1</span> Dados do Município</div>
+      <div class="step" id="step2"><span class="step__num">2</span> Conferir Coletas</div>
+      <div class="step" id="step3"><span class="step__num">3</span> Coletas Extras</div>
+      <div class="step" id="step4"><span class="step__num">4</span> Pré-visualizar PDF</div>
+    </div>
+
+    <!-- ═══════════════════
+         ETAPA 1 — Dados
+         ═══════════════════ -->
+    <div class="etapa ativa" id="etapa1">
+
+      <!-- Status do cronograma -->
+      <div id="statusCronograma"></div>
+
+      <div class="card">
+        <div class="card__title">🏘️ Dados do Município</div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="municipio">Município <span class="req">*</span></label>
+            <select id="municipio" onchange="onMunicipioChange()">
+              <option value="">Selecione o município</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="ano">Ano <span class="req">*</span></label>
+            <select id="ano" onchange="onAnoChange()"></select>
+            <span class="form-hint" style="font-size:11px;color:var(--slate-500);">✓ = cronograma publicado pela Regional</span>
+          </div>
+          <div class="form-group">
+            <label for="populacao">População estimada <span class="req">*</span></label>
+            <input type="number" id="populacao" placeholder="Ex: 15000">
+          </div>
+          <div class="form-group form-group--full">
+            <label for="endereco">Endereço da Secretaria <span class="req">*</span></label>
+            <input type="text" id="endereco" placeholder="Ex: Rua XV de Novembro, 100 — Centro">
+          </div>
+          <div class="form-group">
+            <label for="secretario">Secretário(a) de Saúde <span class="req">*</span></label>
+            <input type="text" id="secretario" placeholder="Nome completo">
+          </div>
+          <div class="form-group">
+            <label for="responsavel">Responsável Técnico <span class="req">*</span></label>
+            <input type="text" id="responsavel" placeholder="Nome completo">
+          </div>
+          <div class="form-group">
+            <label for="profissional">Profissional Executor <span class="req">*</span></label>
+            <input type="text" id="profissional" placeholder="Nome e formação">
+          </div>
+          <div class="form-group">
+            <label for="vigilancia">Setor de Vigilância <span class="req">*</span></label>
+            <select id="vigilancia">
+              <option value="">Selecione…</option>
+              <option value="Vigilância Sanitária">Vigilância Sanitária</option>
+              <option value="Vigilância Ambiental">Vigilância Ambiental</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn--primary btn--lg" id="btnProximo" onclick="irEtapa2()">
+            Próximo ➜
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════
+         ETAPA 2 — não usada (substituída pelo cronograma)
+         ═══════════════════ -->
+    <div class="etapa" id="etapa2" style="display:none;"></div>
+
+    <!-- ═══════════════════
+         ETAPA 3 — Coletas do cronograma
+         ═══════════════════ -->
+    <div class="etapa" id="etapa3">
+      <div class="section-header">
+        <h2 class="section-header__title">📋 Coletas Programadas</h2>
+        <div class="section-header__actions">
+          <button class="btn btn--secondary btn--sm" onclick="voltarEtapa1()">← Voltar</button>
+          <button class="btn btn--primary btn--sm" onclick="irEtapa3b()">Coletas extras ➜</button>
+        </div>
+      </div>
+
+      <div class="alert alert--info">
+        <span class="alert__icon">ℹ️</span>
+        <div class="alert__body">
+          Preencha o <strong>local de coleta</strong>, o <strong>tipo de sistema</strong> e os <strong>parâmetros</strong> para cada amostra.
+          As datas foram preenchidas automaticamente com base no cronograma regional aprovado.
+          Clique no código de <span class="crit-header-btn" onclick="abrirModalCriterios()">Critério</span> para ver a legenda.
+        </div>
+      </div>
+
+      <div class="coleta-table-wrapper">
+        <table class="coleta-table">
+          <thead>
+            <tr>
+              <th style="width:100px;">ID</th>
+              <th style="width:36px;">Sem</th>
+              <th style="width:36px;">Nº</th>
+              <th style="width:115px;">Data</th>
+              <th>Local de Coleta</th>
+              <th style="width:65px;">Sistema</th>
+              <th style="width:35px;" title="Microbiológico">MB</th>
+              <th style="width:35px;" title="Turbidez">TB</th>
+              <th style="width:35px;" title="Cloro Residual">CR</th>
+              <th style="width:35px;" title="Flúor">FL</th>
+              <th style="width:80px;">
+                <span class="crit-header-btn" onclick="abrirModalCriterios()" title="Clique para ver legenda">Crit ▼</span>
+              </th>
+              <th style="width:38px;"></th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabela"></tbody>
+        </table>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn--secondary" onclick="voltarEtapa1()">← Voltar</button>
+        <button class="btn btn--primary" onclick="irEtapa3b()">Coletas extras ➜</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════
+         ETAPA 3B — Coletas extras
+         ═══════════════════ -->
+    <div class="etapa" id="etapa3b">
+      <div class="section-header">
+        <h2 class="section-header__title">➕ Coletas Extras</h2>
+        <div class="section-header__actions">
+          <button class="btn btn--secondary btn--sm" onclick="voltarEtapa3b()">← Voltar</button>
+          <button class="btn btn--success btn--sm btn-add-extra" onclick="adicionarColetaExtra()">+ Adicionar coleta</button>
+          <button class="btn btn--primary btn--sm" onclick="irEtapa4()">Visualizar PDF ➜</button>
+        </div>
+      </div>
+
+      <div class="alert alert--warning">
+        <span class="alert__icon">⚠️</span>
+        <div class="alert__body">
+          Adicione aqui coletas realizadas <strong>fora do cronograma padrão</strong> (amostras por reclamação, surtos, investigações etc.).
+          Estas serão listadas no <strong>Anexo 2</strong> do PDF.
+        </div>
+      </div>
+
+      <div class="coleta-table-wrapper">
+        <table class="coleta-table">
+          <thead>
+            <tr>
+              <th style="width:100px;">ID</th>
+              <th style="width:36px;">Sem</th>
+              <th style="width:36px;">Nº</th>
+              <th style="width:115px;">Data</th>
+              <th>Local de Coleta</th>
+              <th style="width:65px;">Sistema</th>
+              <th style="width:35px;" title="Microbiológico">MB</th>
+              <th style="width:35px;" title="Turbidez">TB</th>
+              <th style="width:35px;" title="Cloro Residual">CR</th>
+              <th style="width:35px;" title="Flúor">FL</th>
+              <th style="width:80px;">
+                <span class="crit-header-btn" onclick="abrirModalCriterios()">Crit ▼</span>
+              </th>
+              <th style="width:38px;"></th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabelaExtras"></tbody>
+        </table>
+      </div>
+
+      <div class="btn-group">
+        <button class="btn btn--secondary" onclick="voltarEtapa3b()">← Voltar</button>
+        <button class="btn btn--success btn-add-extra" onclick="adicionarColetaExtra()">+ Adicionar coleta</button>
+        <button class="btn btn--primary" onclick="irEtapa4()">Visualizar PDF ➜</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════
+         ETAPA 4 — Preview + PDF
+         ═══════════════════ -->
+    <div class="etapa" id="etapa4">
+      <div class="section-header">
+        <h2 class="section-header__title">📄 Pré-visualização do Plano</h2>
+        <div class="section-header__actions">
+          <button class="btn btn--secondary btn--sm" onclick="voltarEtapa3()">← Voltar</button>
+          <button class="btn btn--primary" onclick="gerarPDF()">⬇️ Baixar PDF</button>
+        </div>
+      </div>
+
+      <div class="alert alert--info" style="max-width:820px;margin:0 auto 12px;" id="alertaPreviewEdit">
+        <span class="alert__icon">✏️</span>
+        <div class="alert__body">
+          Este é o texto padrão da 12ª RS — <strong>clique em qualquer texto para editar</strong> como preferir.
+          Para remover um trecho, basta apagar o texto (blocos vazios não saem no PDF).
+          Arraste pelo handle <strong>⋮⋮</strong> para reordenar. As tabelas de coletas são geradas pelo sistema.
+          Suas edições ficam salvas neste navegador para este município e ano.
+        </div>
+      </div>
+
+      <div id="previewToolbar" style="position:sticky;top:68px;z-index:60;max-width:860px;margin:0 auto 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center;background:var(--color-surface,#fff);border:1px solid var(--slate-200);border-radius:12px;padding:8px 12px;box-shadow:0 6px 18px rgba(0,0,0,.10);">
+        <button class="btn btn--secondary btn--sm" onclick="adicionarTitulo()">+ Título</button>
+        <button class="btn btn--secondary btn--sm" onclick="adicionarSubtitulo()">+ Subtítulo</button>
+        <button class="btn btn--secondary btn--sm" onclick="adicionarParagrafo()">+ Parágrafo</button>
+        <button class="btn btn--secondary btn--sm" onclick="adicionarLista()">+ Lista</button>
+        <span style="width:1px;height:22px;background:var(--slate-200);margin:0 4px;"></span>
+        <button class="btn btn--secondary btn--sm" title="Negrito (selecione um trecho)" onmousedown="event.preventDefault()" onclick="aplicarFormatacao('bold')"><strong>B</strong></button>
+        <button class="btn btn--secondary btn--sm" title="Itálico (selecione um trecho)" onmousedown="event.preventDefault()" onclick="aplicarFormatacao('italic')"><em>I</em></button>
+        <button class="btn btn--secondary btn--sm" title="Sublinhado (selecione um trecho)" onmousedown="event.preventDefault()" onclick="aplicarFormatacao('underline')"><span style="text-decoration:underline;">U</span></button>
+        <span style="width:1px;height:22px;background:var(--slate-200);margin:0 4px;"></span>
+        <button class="btn btn--ghost btn--sm" style="color:var(--amber-700);" onclick="restaurarTextoPadrao()">↺ Restaurar texto padrão</button>
+      </div>
+
+      <div class="preview-section" id="previewContent"></div>
+
+      <div class="btn-group" style="justify-content:center;margin-top:20px;">
+        <button class="btn btn--secondary" onclick="voltarEtapa3()">← Voltar</button>
+        <button class="btn btn--primary btn--lg" onclick="gerarPDF()">⬇️ Baixar PDF</button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── Modal critérios ───────────────────── -->
+  <div id="modalCriterios">
+    <div class="modal-criterios-box">
+      <div class="modal-criterios-header">
+        <h3>📋 Legenda dos Critérios de Amostragem</h3>
+        <button class="modal-criterios-fechar" onclick="fecharModalCriterios()">✕</button>
+      </div>
+      <div class="modal-criterios-body">
+        <table>
+          <thead><tr><th>Código</th><th>Descrição</th></tr></thead>
+          <tbody id="criteriosTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Legenda flutuante ─────────────────── -->
+  <div id="criterioLegendaPanel">
+    <button class="legenda-fechar" onclick="fecharLegendaCriterio()">✕</button>
+    <div class="legenda-codigo" id="legCodigo"></div>
+    <div class="legenda-grupo" id="legGrupo"></div>
+    <div class="legenda-desc" id="legDesc"></div>
+  </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/supabase-config.js"></script>
+<script src="js/data.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/planner.js"></script>
+  <script>
+  /* ═══════════════════════════════════════════
+     DADOS E CONSTANTES
+     ═══════════════════════════════════════════ */
+
+  const CRITERIO_INFO = {
+    'DG-1': { grupo: 'Distribuição Geográfica', desc: 'Ponto em zona de alta densidade populacional.' },
+    'DG-2': { grupo: 'Distribuição Geográfica', desc: 'Ponto em extremidade da rede de distribuição.' },
+    'DG-3': { grupo: 'Distribuição Geográfica', desc: 'Ponto em ramal com menor pressão/fluxo.' },
+    'DG-4': { grupo: 'Distribuição Geográfica', desc: 'Ponto em área rural ou periférica.' },
+    'DG-5': { grupo: 'Distribuição Geográfica', desc: 'Ponto próximo ao reservatório de distribuição.' },
+    'DG-6': { grupo: 'Distribuição Geográfica', desc: 'Ponto em ramal com histórico de contaminação.' },
+    'DG-7': { grupo: 'Distribuição Geográfica', desc: 'Ponto em loteamento novo ou recente.' },
+    'DG-8': { grupo: 'Distribuição Geográfica', desc: 'Ponto em área de risco sanitário.' },
+    'DG-9': { grupo: 'Distribuição Geográfica', desc: 'Outro critério de distribuição geográfica.' },
+    'LE-1': { grupo: 'Locais Estratégicos', desc: 'Escola / creche / instituição de ensino.' },
+    'LE-2': { grupo: 'Locais Estratégicos', desc: 'Unidade de saúde (UBS, hospital, clínica).' },
+    'LE-3': { grupo: 'Locais Estratégicos', desc: 'Berçário / maternidade / CRAS / CREAS.' },
+    'LE-4': { grupo: 'Locais Estratégicos', desc: 'Local de culto religioso.' },
+    'LE-5': { grupo: 'Locais Estratégicos', desc: 'Estabelecimento de alimentos (restaurante, padaria).' },
+    'LE-6': { grupo: 'Locais Estratégicos', desc: 'Presídio / unidade de internação.' },
+    'LE-7': { grupo: 'Locais Estratégicos', desc: 'Alojamento / abrigo / habitação coletiva.' },
+    'LE-8': { grupo: 'Locais Estratégicos', desc: 'Praça / logradouro público / bebedouro.' },
+    'LE-9': { grupo: 'Locais Estratégicos', desc: 'Outro local estratégico relevante.' },
+  };
+
+  const MUNICIPIO_POPULACAO = {
+    'Alto Paraíso': 3500, 'Alto Piquiri': 10200, 'Altônia': 20500,
+    'Brasilândia do Sul': 5800, 'Cafezal do Sul': 8200, 'Cruzeiro do Oeste': 22000,
+    'Douradina': 7800, 'Esperança Nova': 4200, 'Francisco Alves': 7400,
+    'Icaraíma': 10500, 'Iporã': 17000, 'Ivaté': 11400, 'Maria Helena': 9200,
+    'Mariluz': 12800, 'Nova Olímpia': 10900, 'Perobal': 8900, 'Pérola': 11200,
+    'São Jorge do Patrocínio': 8500, 'Tapira': 8500, 'Umuarama': 115000, 'Xambrê': 8900,
+  };
+
+  const MUNICIPIO_SIGLA = {
+    'Alto Paraíso': 'APR', 'Alto Piquiri': 'API', 'Altônia': 'ALT',
+    'Brasilândia do Sul': 'BRS', 'Cafezal do Sul': 'CFU', 'Cruzeiro do Oeste': 'COE',
+    'Douradina': 'DOD', 'Esperança Nova': 'ENO', 'Francisco Alves': 'FAL',
+    'Icaraíma': 'ICA', 'Iporã': 'IPO', 'Ivaté': 'IVT', 'Maria Helena': 'MHE',
+    'Mariluz': 'MLZ', 'Nova Olímpia': 'NOL', 'Perobal': 'PER', 'Pérola': 'PRL',
+    'São Jorge do Patrocínio': 'SJP', 'Tapira': 'TPR', 'Umuarama': 'UMR', 'Xambrê': 'XBR',
+  };
+
+  /* ═══════════════════════════════════════════
+     ESTADO GLOBAL
+     ═══════════════════════════════════════════ */
+  let sessao      = null;
+  let cronograma  = null;  // { meta, municipios, status }
+  let modoLeitura = false; // true = somente consulta (prazo de edição encerrado)
+  let __rowUid    = 0;
+
+  /* ═══════════════════════════════════════════
+     INIT
+     ═══════════════════════════════════════════ */
+  function init() {
+    sessao = DB.Auth.exigirLogin();
+    document.getElementById('nomeUsuario').textContent = sessao.nome;
+
+    popularMunicipios();
+    popularAnos();
+    renderCriteriosTable();
+    verificarCronograma();
+
+    // Auto-preencher município se perfil municipal
+    if (sessao.perfil === 'municipio' && sessao.municipioId) {
+      const m = DB.Municipios.buscarPorId(sessao.municipioId);
+      if (m) {
+        const sel = document.getElementById('municipio');
+        sel.value = m.nome;
+        onMunicipioChange();
+        // Perfil município não vê outros municípios
+        sel.disabled = true;
+      }
+    }
+
+    // Restaura os campos preenchidos anteriormente (plano municipal salvo)
+    restaurarCamposMunicipais();
+  }
+  if (DB.Sync.habilitado()) { DB.Sync.ready.then(init); } else { init(); }
+
+  function popularMunicipios() {
+    const muns = DB.Municipios.listar();
+    const sel  = document.getElementById('municipio');
+    muns.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m.nome; o.textContent = m.nome;
+      sel.appendChild(o);
+    });
+  }
+
+  /**
+   * Popula o seletor de ano com todos os anos que possuem plano
+   * publicado (marcados com ✓) e seleciona o mais recente.
+   * Se nenhum plano foi publicado, oferece o ano corrente para
+   * preenchimento manual.
+   */
+  function popularAnos() {
+    const sel      = document.getElementById('ano');
+    const anosPub  = DB.Plano.anosPublicados();
+    const anoAtual = new Date().getFullYear();
+
+    sel.innerHTML = '';
+
+    const anos = anosPub.length ? [...anosPub] : [anoAtual];
+    // Garante o ano corrente na lista mesmo sem plano (preenchimento manual)
+    if (!anos.includes(anoAtual)) anos.push(anoAtual);
+    anos.sort((a, b) => a - b);
+
+    anos.forEach(a => {
+      const o = document.createElement('option');
+      o.value = a;
+      o.textContent = anosPub.includes(a) ? `${a} ✓` : `${a}`;
+      sel.appendChild(o);
+    });
+
+    // Padrão: ano mais recente com plano publicado; senão, ano corrente
+    sel.value = anosPub.length ? anosPub[anosPub.length - 1] : anoAtual;
+  }
+
+  function onAnoChange() {
+    verificarCronograma();
+    atualizarIDs();
+    restaurarCamposMunicipais();
+  }
+
+  function onMunicipioChange() {
+    const mun = document.getElementById('municipio').value;
+    if (!mun) return;
+    // Preencher população padrão
+    const pop = MUNICIPIO_POPULACAO[mun];
+    if (pop) document.getElementById('populacao').value = pop;
+  }
+
+  function verificarCronograma() {
+    const ano   = parseInt(document.getElementById('ano').value, 10);
+    const plano = DB.Plano.carregar(ano);
+    const el    = document.getElementById('statusCronograma');
+
+    modoLeitura = false;
+
+    if (!plano) {
+      el.innerHTML = `<div class="no-cronograma">
+        ⚠️ <strong>Nenhum cronograma publicado para ${ano}.</strong>
+        Aguarde a 12ª Regional publicar o planejamento anual.
+        Você ainda pode preencher os dados e usar coletas manuais.
+      </div>`;
+      cronograma = null;
+      aplicarModoLeitura();
+      return;
+    }
+
+    if (plano.status !== 'publicado') {
+      el.innerHTML = `<div class="no-cronograma">
+        ⏳ <strong>Cronograma de ${ano} em preparação.</strong>
+        O planejamento ainda está em rascunho na Regional.
+        Você ainda pode preencher os dados e usar coletas manuais.
+      </div>`;
+      cronograma = null;
+      aplicarModoLeitura();
+      return;
+    }
+
+    cronograma = Planner.toCronograma(plano);
+
+    // ── Regra de edição ───────────────────────────────
+    // O prazo de edição (definido por ano pela Regional) é a ÚNICA regra:
+    // dentro do prazo → editável; prazo encerrado → somente leitura.
+    const prazoOk    = DB.Plano.podeEditar(ano);
+    const textoPrazo = DB.Plano.textoPrazo(ano);
+
+    modoLeitura = !prazoOk;
+
+    const dt = new Date(plano.publicadoEm).toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+
+    if (modoLeitura) {
+      const motivo = textoPrazo
+        ? `O prazo de edição (<strong>${textoPrazo}</strong>) já encerrou.`
+        : `O prazo de edição já encerrou.`;
+      el.innerHTML = `<div class="no-cronograma" style="background:var(--amber-50);border-color:var(--amber-200);color:var(--amber-700);">
+        🔒 <strong>Modo somente leitura — Plano ${ano}</strong>
+        <span class="cronograma-badge" style="margin-left:8px;">✅ Publicado em ${dt}</span>
+        <br>${motivo}
+        Você pode visualizar o cronograma e baixar o PDF, mas não alterar os dados.
+      </div>`;
+    } else {
+      const prazoHtml = textoPrazo
+        ? `<br><span style="color:var(--slate-600);">✏️ Edição liberada até <strong>${textoPrazo}</strong>.</span>`
+        : '';
+      el.innerHTML = `<div class="cronograma-info">
+        <span style="font-size:18px;">📅</span>
+        <div>
+          <strong>Cronograma regional disponível!</strong>
+          <span class="cronograma-badge" style="margin-left:8px;">✅ Publicado em ${dt}</span>
+          <br><span style="color:var(--slate-600);">Ao clicar em <strong>Próximo</strong>, as coletas serão preenchidas automaticamente.</span>${prazoHtml}
+        </div>
+      </div>`;
+    }
+
+    aplicarModoLeitura();
+  }
+
+  /**
+   * Aplica/remove o modo somente leitura na etapa 1 e no botão Próximo.
+   * As tabelas das etapas 3/3b são travadas ao serem geradas.
+   */
+  function aplicarModoLeitura() {
+    const campos = ['populacao','endereco','secretario','responsavel','profissional','vigilancia'];
+    campos.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = modoLeitura;
+    });
+
+    const btn = document.getElementById('btnProximo');
+    if (btn) btn.innerHTML = modoLeitura ? '👁️ Visualizar plano' : 'Próximo ➜';
+
+    // Botões de coleta extra
+    document.querySelectorAll('.btn-add-extra').forEach(b => {
+      b.style.display = modoLeitura ? 'none' : '';
+    });
+
+    // Alerta de edição da pré-visualização
+    const alerta = document.getElementById('alertaPreviewEdit');
+    if (alerta) alerta.style.display = modoLeitura ? 'none' : '';
+  }
+
+  /** Desabilita todos os controles de uma tabela de coletas (consulta). */
+  function travarTabela(tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    tbody.querySelectorAll('input, select').forEach(el => { el.disabled = true; });
+    tbody.querySelectorAll('button').forEach(b => { b.style.display = 'none'; });
+  }
+
+  /* ═══════════════════════════════════════════
+     NAVEGAÇÃO
+     ═══════════════════════════════════════════ */
+  function ativarEtapa(id, stepNum) {
+    document.querySelectorAll('.etapa').forEach(e => e.classList.remove('ativa'));
+    document.getElementById(id).classList.add('ativa');
+    document.querySelectorAll('.step').forEach((s, i) => {
+      s.classList.remove('active', 'done');
+      if (i + 1 < stepNum) s.classList.add('done');
+      else if (i + 1 === stepNum) s.classList.add('active');
+    });
+    window.scrollTo(0, 0);
+  }
+
+  function voltarEtapa1()  { ativarEtapa('etapa1', 1); }
+  function voltarEtapa3b() { ativarEtapa('etapa3', 2); }
+  function voltarEtapa3()  { ativarEtapa('etapa3b', 3); }
+
+  function irEtapa2() {
+    if (!modoLeitura) {
+      const obr = ['municipio','ano','populacao','endereco','secretario','responsavel','profissional','vigilancia'];
+      let ok = true;
+      obr.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el.value.trim()) { el.style.borderColor = 'var(--red-500)'; ok = false; }
+        else el.style.borderColor = '';
+      });
+      if (!ok) { alert('Preencha todos os campos obrigatórios!'); return; }
+    }
+    gerarPlanilhaDoCronograma();
+    restaurarPlanoMunicipal();
+    _ligarAutoSalvarPlanoMunicipal();
+  }
+
+  /* ═══════════════════════════════════════════
+     PERSISTÊNCIA DO PLANO MUNICIPAL (etapas 1–3)
+     Guarda campos, coletas (locais/sistemas/parâmetros/critérios),
+     datas das derivadas e coletas extras — por município + ano.
+     Fase 2: sincronizado com o Supabase via DB.Sync.
+     ═══════════════════════════════════════════ */
+  function _munplanoKey() {
+    const mun = document.getElementById('municipio')?.value || '';
+    const ano = document.getElementById('ano')?.value || '';
+    return `va_munplano_${mun}_${ano}`;
+  }
+
+  function salvarPlanoMunicipal() {
+    if (modoLeitura) return;
+    const mun = document.getElementById('municipio')?.value;
+    const ano = document.getElementById('ano')?.value;
+    if (!mun || !ano) return;
+
+    const lerLinha = tr => ({
+      data:     tr.querySelector('.data-input')?.value || '',
+      local:    tr.querySelector('.local-input')?.value || '',
+      sistema:  tr.querySelector('.sistema-select')?.value || 'SAA',
+      mb: !!tr.querySelector('.mb-chk')?.checked,
+      tb: !!tr.querySelector('.tb-chk')?.checked,
+      cr: !!tr.querySelector('.cr-chk')?.checked,
+      fl: !!tr.querySelector('.fl-chk')?.checked,
+      criterio: tr.querySelector('.criterio-select')?.value || '',
+    });
+
+    const tbody = document.getElementById('corpoTabela');
+    const normais = [];
+    if (tbody) {
+      tbody.querySelectorAll('tr:not([data-linked])').forEach(tr => {
+        const item = lerLinha(tr);
+        item.originalDate = tr.dataset.originalDate || '';
+        const filho = tbody.querySelector(`tr[data-parent="${tr.dataset.uid}"]`);
+        if (filho) item.filho = lerLinha(filho);
+        normais.push(item);
+      });
+    }
+    const extras = [];
+    document.querySelectorAll('#corpoTabelaExtras tr').forEach(tr => extras.push(lerLinha(tr)));
+
+    const obj = {
+      v: 1,
+      salvoEm: new Date().toISOString(),
+      campos: {
+        populacao:    document.getElementById('populacao')?.value || '',
+        endereco:     document.getElementById('endereco')?.value || '',
+        secretario:   document.getElementById('secretario')?.value || '',
+        responsavel:  document.getElementById('responsavel')?.value || '',
+        profissional: document.getElementById('profissional')?.value || '',
+        vigilancia:   document.getElementById('vigilancia')?.value || '',
+      },
+      normais, extras,
+    };
+    try {
+      localStorage.setItem(_munplanoKey(), JSON.stringify(obj));
+      if (window.DB?.Sync) DB.Sync.notify(_munplanoKey());
+    } catch (e) { /* quota */ }
+  }
+
+  let _munSaveTimer = null;
+  function _agendarSalvarPlanoMunicipal() {
+    clearTimeout(_munSaveTimer);
+    _munSaveTimer = setTimeout(salvarPlanoMunicipal, 800);
+  }
+
+  function _ligarAutoSalvarPlanoMunicipal() {
+    ['corpoTabela', 'corpoTabelaExtras'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.oninput = _agendarSalvarPlanoMunicipal; el.onchange = _agendarSalvarPlanoMunicipal; }
+    });
+    ['populacao','endereco','secretario','responsavel','profissional','vigilancia'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', _agendarSalvarPlanoMunicipal);
+    });
+  }
+
+  /** Restaura só os campos da etapa 1 (usado no init, antes da validação). */
+  function restaurarCamposMunicipais(obj) {
+    let o = obj;
+    if (!o) {
+      const raw = localStorage.getItem(_munplanoKey());
+      if (!raw) return;
+      try { o = JSON.parse(raw); } catch (e) { return; }
+    }
+    if (!o || o.v !== 1) return;
+    Object.entries(o.campos || {}).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el && val) el.value = val;
+    });
+  }
+
+  /** Reaplica o que foi salvo sobre a planilha recém-gerada. */
+  function restaurarPlanoMunicipal() {
+    const raw = localStorage.getItem(_munplanoKey());
+    if (!raw) return;
+    let o; try { o = JSON.parse(raw); } catch (e) { return; }
+    if (!o || o.v !== 1) return;
+
+    restaurarCamposMunicipais(o);
+
+    const aplicarLinha = (tr, item, ehExtra) => {
+      const sis = tr.querySelector('.sistema-select');
+      if (sis && item.sistema) { sis.value = item.sistema; aplicarRegrasSistema(tr); }
+      const setChk = (cls, val) => {
+        const chk = tr.querySelector(cls);
+        if (chk && !chk.disabled && chk.checked !== val) {
+          chk.checked = val;
+          chk.dispatchEvent(new Event('change', { bubbles: false }));
+        }
+      };
+      setChk('.cr-chk', !!item.cr);
+      setChk('.fl-chk', !!item.fl);
+      if (ehExtra) { setChk('.mb-chk', !!item.mb); setChk('.tb-chk', !!item.tb); }
+      const loc = tr.querySelector('.local-input');
+      if (loc && item.local) loc.value = item.local;
+      const crit = tr.querySelector('.criterio-select');
+      if (crit && item.criterio) crit.value = item.criterio;
+      const dataInp = tr.querySelector('.data-input');
+      if (dataInp && !dataInp.disabled && item.data) { dataInp.value = item.data; atualizarSemanaPorData(tr); }
+    };
+
+    // Coletas normais — casadas por posição, validadas pela data original do cronograma
+    const tbody = document.getElementById('corpoTabela');
+    if (tbody && Array.isArray(o.normais)) {
+      const rows = [...tbody.querySelectorAll('tr:not([data-linked])')];
+      rows.forEach((tr, i) => {
+        const item = o.normais[i];
+        if (!item) return;
+        if (item.originalDate && tr.dataset.originalDate && item.originalDate !== tr.dataset.originalDate) return; // cronograma mudou
+        aplicarLinha(tr, item, false);
+        if (item.filho) {
+          const filho = tbody.querySelector(`tr[data-parent="${tr.dataset.uid}"]`);
+          if (filho) aplicarLinha(filho, item.filho, false);
+        }
+      });
+    }
+
+    // Coletas extras — recriadas do zero
+    if (Array.isArray(o.extras) && o.extras.length) {
+      const tex = document.getElementById('corpoTabelaExtras');
+      if (tex) tex.innerHTML = '';
+      window.baseNumeroExtras = (tbody?.querySelectorAll('tr').length) || 0;
+      o.extras.forEach(item => {
+        adicionarColetaExtra();
+        const tr = tex.lastElementChild;
+        if (tr) aplicarLinha(tr, item, true);
+      });
+      if (typeof renumerarExtras === 'function') renumerarExtras();
+      atualizarIDsExtras();
+    }
+
+    atualizarIDs();
+  }
+
+  function irEtapa3b() {
+    const mainRows = document.getElementById('corpoTabela')?.querySelectorAll('tr') || [];
+    window.baseNumeroExtras = mainRows.length;
+    if (modoLeitura) travarTabela('corpoTabelaExtras');
+    ativarEtapa('etapa3b', 3);
+  }
+
+  function irEtapa4() {
+    gerarPreview();
+    if (modoLeitura) {
+      const preview = document.getElementById('previewContent');
+      preview.querySelectorAll('[contenteditable]').forEach(el => { el.contentEditable = 'false'; });
+      preview.querySelectorAll('.drag-handle').forEach(h => { h.style.display = 'none'; });
+    }
+    ativarEtapa('etapa4', 4);
+  }
+
+  /* ═══════════════════════════════════════════
+     GERAÇÃO DA PLANILHA (do cronograma)
+     ═══════════════════════════════════════════ */
+  function gerarPlanilhaDoCronograma() {
+    __rowUid = 0;
+    const municipio  = document.getElementById('municipio').value;
+
+    if (!municipio) { alert('Selecione um município!'); return; }
+
+    let dadosMun = [];
+
+    if (cronograma && cronograma.municipios && cronograma.municipios[municipio]) {
+      dadosMun = [...cronograma.municipios[municipio]].sort((a, b) =>
+        (a.date || '').localeCompare(b.date || '')
+      );
+    }
+
+    const tbody = document.getElementById('corpoTabela');
+    tbody.innerHTML = '';
+
+    if (dadosMun.length > 0) {
+      let num = 1;
+      dadosMun.forEach(item => {
+        for (let i = 0; i < item.count; i++) {
+          const tr = criarLinhaColeta({ semana: item.isoWeek, numero: num++ });
+          tbody.appendChild(tr);
+          const dataInp = tr.querySelector('.data-input');
+          if (dataInp) { dataInp.value = item.date; dataInp.disabled = true; }
+          tr.dataset.originalDate = item.date;
+          atualizarSemanaPorData(tr);
+        }
+      });
+    } else {
+      // Sem cronograma: cria 1 linha vazia para o usuário preencher manualmente
+      const tr = criarLinhaColeta({ semana: '?', numero: 1 });
+      tbody.appendChild(tr);
+    }
+
+    window.totalColetas = tbody.querySelectorAll('tr').length;
+    atualizarIDs();
+    if (modoLeitura) travarTabela('corpoTabela');
+    ativarEtapa('etapa3', 2);
+  }
+
+  /* ═══════════════════════════════════════════
+     LINHA DE COLETA
+     ═══════════════════════════════════════════ */
+  function criarLinhaColeta({ semana, numero, linked = false, parentUid = null, numeroSuffix = '', isExtra = false }) {
+    const uid = ++__rowUid;
+    const tr  = document.createElement('tr');
+    tr.dataset.uid    = uid;
+    tr.dataset.semana = semana;
+    tr.dataset.numero = numero;
+    tr.dataset.isExtra = isExtra ? '1' : '';
+    if (linked) {
+      tr.dataset.linked = '1';
+      tr.dataset.parent = String(parentUid);
+      tr.classList.add('linked-row');
+    }
+
+    const criterioOpts = Object.keys(CRITERIO_INFO).map(code => {
+      const grp = CRITERIO_INFO[code].grupo;
+      return { code, grp };
+    });
+
+    // Group options
+    const grupos = {};
+    criterioOpts.forEach(o => {
+      if (!grupos[o.grp]) grupos[o.grp] = [];
+      grupos[o.grp].push(o.code);
+    });
+
+    const critSelect = document.createElement('select');
+    critSelect.className = 'criterio-select';
+    Object.entries(grupos).forEach(([grp, codes]) => {
+      const og = document.createElement('optgroup');
+      og.label = grp;
+      codes.forEach(c => {
+        const op = document.createElement('option');
+        op.value = c; op.textContent = c;
+        if (c === 'LE-1') op.selected = true;
+        og.appendChild(op);
+      });
+      critSelect.appendChild(og);
+    });
+
+    critSelect.addEventListener('change', () => mostrarLegendaCriterio(critSelect.value));
+
+    tr.innerHTML = `
+      <td class="td-id"></td>
+      <td class="td-semana" style="text-align:center;font-weight:600;">${semana}</td>
+      <td class="td-numero" style="text-align:center;">${numero}${numeroSuffix}</td>
+      <td><input type="date" class="data-input"></td>
+      <td><input type="text" class="local-input" placeholder="Local de coleta"></td>
+      <td>
+        <select class="sistema-select" style="width:70px;">
+          <option value="SAA">SAA</option>
+          <option value="SAC">SAC</option>
+          <option value="SAI">SAI</option>
+        </select>
+      </td>
+      <td style="text-align:center;"><input type="checkbox" class="mb-chk" checked></td>
+      <td style="text-align:center;"><input type="checkbox" class="tb-chk" checked></td>
+      <td style="text-align:center;"><input type="checkbox" class="cr-chk" checked></td>
+      <td style="text-align:center;"><input type="checkbox" class="fl-chk"></td>
+      <td class="td-crit"></td>
+      <td class="td-acao"></td>
+    `;
+
+    tr.querySelector('.td-crit').appendChild(critSelect);
+    // Eventos: extras são livres (sem regras de sistema); normais aplicam as regras.
+    if (isExtra) {
+      inicializarEventosLinhaExtra(tr);
+    } else {
+      inicializarEventosLinha(tr);
+    }
+    aplicarRegrasSistema(tr);
+
+    return tr;
+  }
+
+  function atualizarZebra() {
+    const tbody = document.getElementById('corpoTabela');
+    if (!tbody) return;
+    let count = 0;
+    tbody.querySelectorAll('tr').forEach(tr => {
+      tr.classList.remove('zebra-odd', 'zebra-even');
+      if (!tr.dataset.linked) {
+        tr.classList.add(count % 2 === 0 ? 'zebra-even' : 'zebra-odd');
+        count++;
+      }
+    });
+  }
+
+  // Chave de ordenação do Nº: "4" → 4 | "4-CR" → 10004 (depois dos normais) | outros → 999999
+  function _sortKeyNumero(numStr) {
+    const s = String(numStr || '').trim();
+    if (!s || s === '—') return 999999;
+    const cr = s.match(/^(\d+)-CR$/i);
+    if (cr) return 10000 + parseInt(cr[1]);
+    const n = parseInt(s);
+    return isNaN(n) ? 999999 : n;
+  }
+
+  // Padrão de ID (igual ao projeto original): NNN + SIGLA + ANO  →  ex.: "001ALT2026"
+  // Derivadas (-CR) entram na numeração depois de todas as coletas normais.
+  function atualizarIDs() {
+    const municipio = document.getElementById('municipio')?.value || '';
+    const ano       = document.getElementById('ano')?.value || '';
+    const sigla     = MUNICIPIO_SIGLA[municipio] || '???';
+
+    const tbody = document.getElementById('corpoTabela');
+    if (!tbody) return;
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    const sorted = [...rows]
+      .map((tr, i) => ({
+        tr,
+        grupo:  tr.dataset.linked === '1' ? 1 : 0,   // derivadas por último
+        data:   tr.querySelector('.data-input')?.value || '9999-12-31',
+        numKey: _sortKeyNumero(tr.querySelector('.td-numero')?.textContent),
+        idx:    i,
+      }))
+      .sort((a, b) =>
+        a.grupo - b.grupo ||
+        a.data.localeCompare(b.data) ||
+        a.numKey - b.numKey ||
+        a.idx - b.idx
+      );
+
+    sorted.forEach((item, i) => {
+      const td = item.tr.querySelector('.td-id');
+      if (!td) return;
+      const data = item.tr.querySelector('.data-input')?.value || '';
+      td.textContent = (data && municipio && ano)
+        ? `${String(i + 1).padStart(3, '0')}${sigla}${ano}`
+        : '—';
+    });
+
+    atualizarZebra();
+  }
+
+  // IDs das coletas extras: EX- + NNN + SIGLA + ANO  →  ex.: "EX-001ALT2026"
+  function atualizarIDsExtras() {
+    const municipio = document.getElementById('municipio')?.value || '';
+    const ano       = document.getElementById('ano')?.value || '';
+    const sigla     = MUNICIPIO_SIGLA[municipio] || '???';
+
+    const tbody = document.getElementById('corpoTabelaExtras');
+    if (!tbody) return;
+    Array.from(tbody.querySelectorAll('tr')).forEach((tr, i) => {
+      const td = tr.querySelector('.td-id');
+      if (!td) return;
+      td.textContent = (municipio && ano)
+        ? `EX-${String(i + 1).padStart(3, '0')}${sigla}${ano}`
+        : '—';
+    });
+  }
+
+  function atualizarSemanaPorData(tr) {
+    const dataInp = tr.querySelector('.data-input');
+    if (!dataInp || !dataInp.value) return;
+    const d  = new Date(dataInp.value + 'T12:00:00');
+    const sw = Utils.semanaISO(d);
+    const tdSem = tr.querySelector('.td-semana');
+    if (tdSem) tdSem.textContent = sw;
+    tr.dataset.semana = sw;
+  }
+
+  function aplicarRegrasSistema(tr) {
+    const isLinked   = tr.dataset.linked === '1';
+    const sistemaSel = tr.querySelector('.sistema-select');
+    const mb = tr.querySelector('.mb-chk');
+    const tb = tr.querySelector('.tb-chk');
+    const cr = tr.querySelector('.cr-chk');
+    const fl = tr.querySelector('.fl-chk');
+    if (!sistemaSel || !mb) return;
+
+    // ── Coletas EXTRAS: sem regras — os 4 tipos são livres e nunca geram derivada ──
+    if (tr.dataset.isExtra === '1') {
+      sistemaSel.disabled = false;
+      mb.disabled = false; tb.disabled = false; cr.disabled = false; fl.disabled = false;
+      atualizarZebra();
+      return;
+    }
+
+    // ── Linha derivada (SAA só de CR), criada quando um SAC/SAI fica sem cloro ──
+    // Força SAA travado, somente CR marcado, MB/TB/FL desmarcados, tudo travado.
+    if (isLinked) {
+      sistemaSel.value = 'SAA';
+      sistemaSel.disabled = true;
+      mb.checked = false; tb.checked = false; fl.checked = false; cr.checked = true;
+      mb.disabled = true; tb.disabled = true; cr.disabled = true; fl.disabled = true;
+      atualizarZebra();
+      return;
+    }
+
+    // ── Linhas normais ──
+    sistemaSel.disabled = false;
+    const sistema = sistemaSel.value;
+    mb.disabled = false; tb.disabled = false; cr.disabled = false; fl.disabled = false;
+
+    if (sistema === 'SAA') {
+      // Água tratada: MB/TB/CR/FL marcados; MB/TB/CR travados; FL editável; sem derivada.
+      mb.checked = true; tb.checked = true; cr.checked = true; fl.checked = true;
+      mb.disabled = true; tb.disabled = true; cr.disabled = true;
+      fl.disabled = false;
+      removerLinhaVinculada(tr);
+    }
+    else if (sistema === 'SAI') {
+      // Solução individual: MB/TB marcados e travados; CR/FL livres, desmarcados por padrão.
+      mb.checked = true; tb.checked = true;
+      mb.disabled = true; tb.disabled = true;
+      cr.checked = false; fl.checked = false;
+      cr.disabled = false; fl.disabled = false;
+      if (!cr.checked) garantirLinhaVinculadaSAA(tr); else removerLinhaVinculada(tr);
+    }
+    else if (sistema === 'SAC') {
+      // Solução coletiva: MB/TB marcados e travados; CR livre (default marcado); FL livre (default desmarcado).
+      mb.checked = true; tb.checked = true;
+      mb.disabled = true; tb.disabled = true;
+      cr.disabled = false; fl.disabled = false;
+      if (!cr.dataset.userTouched) cr.checked = true;
+      if (!fl.dataset.userTouched) fl.checked = false;
+      if (!cr.checked) garantirLinhaVinculadaSAA(tr); else removerLinhaVinculada(tr);
+    }
+
+    atualizarZebra();
+  }
+
+  function garantirLinhaVinculadaSAA(tr) {
+    const tbody = tr.closest('tbody');
+    if (!tbody || tr.dataset.linked === '1') return;
+    const uid  = tr.dataset.uid;
+    if (tbody.querySelector(`tr[data-parent="${uid}"]`)) return;
+
+    const linkedTr = criarLinhaColeta({
+      semana: tr.dataset.semana || '',
+      numero: tr.dataset.numero || '',
+      numeroSuffix: '-CR',
+      linked: true,
+      parentUid: uid,
+    });
+
+    // Data: mesma do pai (a linha derivada acompanha a coleta de origem)
+    const dataInp = tr.querySelector('.data-input');
+    if (dataInp) {
+      const ldi = linkedTr.querySelector('.data-input');
+      if (ldi) { ldi.value = dataInp.value; ldi.readOnly = false; ldi.disabled = false; }
+    }
+    const localInp = tr.querySelector('.local-input');
+    if (localInp) {
+      const lli = linkedTr.querySelector('.local-input');
+      if (lli) lli.placeholder = 'Local (SAA correspondente)';
+    }
+
+    // As regras de linha derivada (SAA travado, só CR) já são aplicadas
+    // por aplicarRegrasSistema dentro de criarLinhaColeta (branch isLinked).
+    tr.insertAdjacentElement('afterend', linkedTr);
+    atualizarSemanaPorData(linkedTr);
+    atualizarZebra();
+    atualizarIDs();
+  }
+
+  function removerLinhaVinculada(tr) {
+    const tbody = tr.closest('tbody');
+    if (!tbody) return;
+    const uid    = tr.dataset.uid;
+    const linked = tbody.querySelector(`tr[data-parent="${uid}"]`);
+    if (linked) { linked.remove(); atualizarZebra(); atualizarIDs(); }
+  }
+
+  function inicializarEventosLinha(tr) {
+    const sistemaSel = tr.querySelector('.sistema-select');
+    const cr = tr.querySelector('.cr-chk');
+    const fl = tr.querySelector('.fl-chk');
+    const dataInp = tr.querySelector('.data-input');
+
+    if (dataInp) {
+      const upd = () => { atualizarSemanaPorData(tr); atualizarIDs(); };
+      dataInp.addEventListener('change', upd);
+      dataInp.addEventListener('input', upd);
+    }
+
+    if (cr) cr.addEventListener('change', () => { cr.dataset.userTouched = '1'; });
+    if (fl) fl.addEventListener('change', () => { fl.dataset.userTouched = '1'; });
+
+    if (sistemaSel) {
+      sistemaSel.addEventListener('change', () => setTimeout(() => aplicarRegrasSistema(tr), 0));
+    }
+
+    if (cr) {
+      cr.addEventListener('change', () => {
+        if (tr.dataset.linked === '1') return;
+        const sist = tr.querySelector('.sistema-select')?.value;
+        if (sist !== 'SAC' && sist !== 'SAI') return;
+        if (!cr.checked) garantirLinhaVinculadaSAA(tr); else removerLinhaVinculada(tr);
+        atualizarZebra();
+      });
+    }
+  }
+
+  /* ═══════════════════════════════════════════
+     COLETAS EXTRAS
+     ═══════════════════════════════════════════ */
+  function renumerarExtras() {
+    const tbody = document.getElementById('corpoTabelaExtras');
+    if (!tbody) return;
+    const base  = window.baseNumeroExtras || 0;
+    let counter = 1;
+    tbody.querySelectorAll('tr:not([data-linked="1"])').forEach(tr => {
+      const novoNum = base + counter++;
+      const tdNum   = tr.querySelector('.td-numero');
+      if (tdNum) tdNum.textContent = novoNum;
+      tr.dataset.numero = novoNum;
+      const uid    = tr.dataset.uid;
+      const filho  = tbody.querySelector(`tr[data-parent="${uid}"]`);
+      if (filho) { const tf = filho.querySelector('.td-numero'); if (tf) tf.textContent = novoNum + 'a'; }
+    });
+  }
+
+  function adicionarColetaExtra() {
+    const tbody = document.getElementById('corpoTabelaExtras');
+    const base  = window.baseNumeroExtras || 0;
+    const pais  = tbody.querySelectorAll('tr:not([data-linked="1"])').length;
+    const novoNum = base + pais + 1;
+    const ano   = document.getElementById('ano')?.value || new Date().getFullYear();
+
+    const tr = criarLinhaColeta({ semana: 'EX', numero: novoNum, isExtra: true });
+    const dataInp = tr.querySelector('.data-input');
+    if (dataInp) { dataInp.value = `${ano}-01-01`; dataInp.disabled = false; }
+
+    const tdAcao = tr.querySelector('.td-acao') || tr.querySelector('td:last-child');
+    if (tdAcao) {
+      tdAcao.innerHTML = `<button class="btn btn--ghost btn--sm" style="color:var(--red-500);" title="Excluir" onclick="excluirColetaExtra(this.closest('tr'))">✕</button>`;
+    }
+
+    tbody.appendChild(tr);
+    atualizarSemanaPorData(tr);
+    atualizarIDsExtras();
+  }
+
+  function excluirColetaExtra(tr) {
+    tr.remove();
+    renumerarExtras();
+    atualizarIDsExtras();
+  }
+
+  function inicializarEventosLinhaExtra(tr) {
+    const dataInp = tr.querySelector('.data-input');
+    if (dataInp) {
+      const fn = () => atualizarSemanaPorData(tr);
+      dataInp.addEventListener('change', fn);
+      dataInp.addEventListener('input', fn);
+    }
+    ['mb-chk','tb-chk','cr-chk','fl-chk'].forEach(cls => {
+      const chk = tr.querySelector('.' + cls);
+      if (chk) chk.addEventListener('change', () => { chk.dataset.userTouched = '1'; });
+    });
+    const sist = tr.querySelector('.sistema-select');
+    if (sist) sist.addEventListener('change', () => setTimeout(() => aplicarRegrasSistema(tr), 0));
+  }
+
+  /* ═══════════════════════════════════════════
+     CRITÉRIOS
+     ═══════════════════════════════════════════ */
+  function renderCriteriosTable() {
+    const tbody = document.getElementById('criteriosTableBody');
+    if (!tbody) return;
+    let lastGrupo = '';
+    Object.entries(CRITERIO_INFO).forEach(([code, info]) => {
+      if (info.grupo !== lastGrupo) {
+        lastGrupo = info.grupo;
+        const tr = document.createElement('tr');
+        tr.className = 'modal-group-label';
+        tr.innerHTML = `<td colspan="2">${info.grupo}</td>`;
+        tbody.appendChild(tr);
+      }
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><span class="modal-crit-badge" onclick="selecionarCriterio('${code}')">${code}</span></td>
+        <td>${info.desc}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function abrirModalCriterios() { document.getElementById('modalCriterios').classList.add('visible'); }
+  function fecharModalCriterios() { document.getElementById('modalCriterios').classList.remove('visible'); }
+
+  function selecionarCriterio(code) {
+    mostrarLegendaCriterio(code);
+    fecharModalCriterios();
+  }
+
+  function mostrarLegendaCriterio(code) {
+    const info = CRITERIO_INFO[code];
+    if (!info) return;
+    document.getElementById('legCodigo').textContent = code;
+    document.getElementById('legGrupo').textContent  = info.grupo;
+    document.getElementById('legDesc').textContent   = info.desc;
+    document.getElementById('criterioLegendaPanel').classList.add('visible');
+  }
+
+  function fecharLegendaCriterio() {
+    document.getElementById('criterioLegendaPanel').classList.remove('visible');
+  }
+
+  /* ═══════════════════════════════════════════
+     PRÉ-VISUALIZAÇÃO (PREVIEW)
+     ═══════════════════════════════════════════ */
+  function coletarDadosTabela(tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return [];
+    return Array.from(tbody.querySelectorAll('tr')).map(tr => ({
+      id:       tr.querySelector('.td-id')?.textContent || '',
+      semana:   tr.querySelector('.td-semana')?.textContent || '',
+      numero:   tr.querySelector('.td-numero')?.textContent || '',
+      data:     tr.querySelector('.data-input')?.value || '',
+      local:    tr.querySelector('.local-input')?.value || '',
+      sistema:  tr.querySelector('.sistema-select')?.value || 'SAA',
+      mb:       tr.querySelector('.mb-chk')?.checked ?? true,
+      tb:       tr.querySelector('.tb-chk')?.checked ?? true,
+      cr:       tr.querySelector('.cr-chk')?.checked ?? true,
+      fl:       tr.querySelector('.fl-chk')?.checked ?? false,
+      criterio: tr.querySelector('.criterio-select')?.value || 'LE-1',
+    }));
+  }
+
+  /* Toast simples (feedback não bloqueante) */
+  function mostrarToast(msg) {
+    let t = document.getElementById('_toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = '_toast';
+      t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--slate-800,#1e293b);color:#fff;padding:10px 18px;border-radius:10px;font-size:13.5px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;transition:opacity .25s;max-width:90vw;text-align:center;pointer-events:none;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.display = 'block';
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => {
+      t.style.opacity = '0';
+      setTimeout(() => { t.style.display = 'none'; }, 300);
+    }, 3500);
+  }
+
+  /* Chave de armazenamento das edições de texto do preview (por município + ano) */
+  function _previewStorageKey() {
+    const mun = document.getElementById('municipio')?.value || '';
+    const ano = document.getElementById('ano')?.value || '';
+    return `va_previewedit_${mun}_${ano}`;
+  }
+
+  let _previewSaveTimer = null;
+  function _agendarSalvarPreview() {
+    clearTimeout(_previewSaveTimer);
+    _previewSaveTimer = setTimeout(salvarEdicoesPreview, 600);
+  }
+
+  function salvarEdicoesPreview() {
+    const p = document.getElementById('previewContent');
+    if (!p || !p.childElementCount) return;
+    try {
+      localStorage.setItem(_previewStorageKey(), p.innerHTML);
+      if (window.DB?.Sync) DB.Sync.notify(_previewStorageKey());
+    } catch (e) { /* quota */ }
+  }
+
+  function restaurarTextoPadrao() {
+    if (!confirm('Restaurar o texto padrão? Todas as edições de texto feitas neste plano serão descartadas (as tabelas de coletas não são afetadas).')) return;
+    localStorage.removeItem(_previewStorageKey());
+    if (window.DB?.Sync) DB.Sync.notify(_previewStorageKey());
+    gerarPreview();
+    mostrarToast('📄 Texto padrão restaurado.');
+  }
+
+  function gerarPreview() {
+    const municipio    = document.getElementById('municipio').value;
+    const ano          = document.getElementById('ano').value;
+    const populacao    = document.getElementById('populacao').value;
+    const endereco     = document.getElementById('endereco').value;
+    const secretario   = document.getElementById('secretario').value;
+    const responsavel  = document.getElementById('responsavel').value;
+    const profissional = document.getElementById('profissional').value;
+    const vigilancia   = document.getElementById('vigilancia').value;
+
+    // Garante que os IDs (normais e extras) estejam atualizados no preview/PDF
+    if (typeof atualizarIDs === 'function') atualizarIDs();
+    if (typeof atualizarIDsExtras === 'function') atualizarIDsExtras();
+
+    const coletas       = coletarDadosTabela('corpoTabela');
+    const coletasExtras = coletarDadosTabela('corpoTabelaExtras');
+
+    const preview = document.getElementById('previewContent');
+    preview.innerHTML = '';
+
+    /* ── Tabelas geradas pelo sistema (sempre recalculadas, nunca vêm das edições salvas) ── */
+    const fmtRow = c => [
+      c.id, c.semana, c.numero,
+      c.data ? new Date(c.data + 'T12:00:00').toLocaleDateString('pt-BR') : '',
+      c.local, c.sistema,
+      c.mb ? '✓' : '', c.tb ? '✓' : '', c.cr ? '✓' : '', c.fl ? '✓' : '',
+      c.criterio,
+    ];
+    const headColetas = ['ID', 'Sem.', 'Nº', 'Data', 'Local', 'Sistema', 'MB', 'TB', 'CR', 'FL', 'Critério'];
+
+    function tabelaColetas() {
+      if (!coletas.length) return null;
+      const t = criarTabelaItem({ caption: `Anexo 1 — Coletas Programadas — ${municipio} ${ano}`, head: headColetas, rows: coletas.map(fmtRow) });
+      t.dataset.tabela = 'coletas';
+      return t;
+    }
+    function tabelaCriterios() {
+      const usados = [...new Set(coletas.concat(coletasExtras).map(c => c.criterio).filter(Boolean))];
+      const t = criarTabelaItem({ caption: 'Critérios de coleta utilizados (Anexo 1 da Diretriz Nacional)', head: ['Código', 'Descrição'], rows: usados.map(c => [c, CRITERIO_INFO[c]?.desc || '']) });
+      t.dataset.tabela = 'criterios';
+      return t;
+    }
+    function tabelaExtras() {
+      if (!coletasExtras.length) return null;
+      const t = criarTabelaItem({ caption: 'Anexo 2 — Coletas Extras', head: headColetas, rows: coletasExtras.map(fmtRow) });
+      t.dataset.tabela = 'extras';
+      return t;
+    }
+
+    /* ── Edições salvas: restaura o texto do usuário e troca as tabelas por versões atuais ── */
+    const salvo = localStorage.getItem(_previewStorageKey());
+    if (salvo) {
+      preview.innerHTML = salvo;
+      const frescas = { coletas: tabelaColetas(), criterios: tabelaCriterios(), extras: tabelaExtras() };
+      Object.entries(frescas).forEach(([k, fresh]) => {
+        const antiga = preview.querySelector(`.item-editable[data-tabela="${k}"]`);
+        if (antiga) {
+          if (fresh) antiga.replaceWith(fresh); else antiga.remove();
+        } else if (fresh && k === 'extras') {
+          // Extras adicionadas depois da primeira edição: acrescenta no fim
+          preview.appendChild(criarItem('h3', '3.2 COLETAS EXTRAS — ANEXO 2'));
+          preview.appendChild(fresh);
+        }
+      });
+      _initPreviewEdicao(preview);
+      mostrarToast('✏️ Suas edições anteriores foram recuperadas. Use "Restaurar texto padrão" para recomeçar.');
+      return;
+    }
+
+    /* ── Texto padrão completo (Plano de Amostragem — 12ª RS) ── */
+    function addItem(tag, html) { preview.appendChild(criarItem(tag, html)); }
+
+    addItem('h2', '1. INTRODUÇÃO');
+    addItem('p', 'Em março de 1977, com a promulgação do Decreto Federal nº79.367, foi atribuída ao Ministério da Saúde (MS) a competência de elaborar normas e estabelecer o padrão de potabilidade de água para consumo humano a serem observados em todo o território nacional. Desde então, tendo em vista essa competência, o Ministério da Saúde determina o padrão de potabilidade da água para consumo humano por meio de portarias nacionais.');
+    addItem('p', 'A vigilância da qualidade da água para consumo humano (Vigiagua) consiste no conjunto de ações adotadas continuamente para garantir que a água consumida pela população atenda ao padrão de potabilidade estabelecido na legislação vigente, bem como avaliar e prevenir os possíveis riscos que os sistemas e as soluções alternativas de abastecimento de água podem representar à população abastecida, abrangendo todo o sistema de produção de água potável, desde a captação até o ponto de consumo, incluindo estações de tratamento, reservatórios e sistemas de distribuição (BRASIL, 2016).');
+
+    addItem('h3', '1.1 Objetivos:');
+    addItem('p', 'O monitoramento realizado pela vigilância da qualidade da água para consumo humano tem como objetivos:');
+    addItem('ul', `
+      <li>Avaliar a qualidade da água consumida pela população;</li>
+      <li>Aferir o monitoramento realizado pelo controle da qualidade da água;</li>
+      <li>Avaliar a eficiência do tratamento da água;</li>
+      <li>Avaliar a integridade do sistema de distribuição;</li>
+      <li>Subsidiar a associação entre agravos à saúde e situações de vulnerabilidade;</li>
+      <li>Identificar pontos críticos/vulneráveis (fatores de risco) em sistemas e soluções alternativas de abastecimento;</li>
+      <li>Verificar se as condições de uso e ocupação do solo da bacia hidrográfica interferem na qualidade da água bruta e/ou tratada;</li>
+      <li>Verificar se o tratamento empregado é adequado às características da água do manancial de captação;</li>
+      <li>Identificar grupos populacionais expostos a situações de risco (BRASIL, 2016).</li>
+    `);
+    addItem('p', `Os resultados da análise da água servem ainda para avaliar o dano sobre o ambiente aquático e subsidiar ações para gerenciar e atenuar os impactos ambientais. Para tanto, faz-se necessário o planejamento e elaboração do presente documento para nortear e realizar de forma efetiva, no ano de <b>${ano}</b>, as coletas de amostras para análise da água para consumo humano no município de <b>${municipio}</b>.`);
+
+    addItem('h2', '2. CONCEITOS');
+    addItem('p', 'A água potável é aquela que está em condições apropriadas para o consumo humano e deve ser livre de contaminações para que não haja risco de doenças. Contaminações por vírus, bactérias e substâncias tóxicas microscópicas são imperceptíveis a olho nu e podem prejudicar a saúde da população. Por isso, as águas consumíveis devem estar enquadradas em parâmetros específicos de qualidade, determinados pelo Ministério da Saúde, constantes na Portaria GM/MS n° 888, de 04 de Maio de 2021.');
+
+    addItem('h3', '2.1 FORMAS DE ABASTECIMENTO SAA, SAC E SAI');
+    addItem('p', 'Os sistemas monitorados pelo programa Vigiagua são:');
+    addItem('p', '<b>Sistema de abastecimento de água (SAA):</b> Instalação composta por um conjunto de obras civis, materiais e equipamentos, desde a zona de captação até as ligações prediais, destinada à produção e ao fornecimento coletivo de água potável, por meio de rede de distribuição.');
+    addItem('p', '<b>Solução alternativa coletiva de abastecimento de água (SAC):</b> Modalidade de abastecimento coletivo destinada a fornecer água potável, sem rede de distribuição.');
+    addItem('p', '<b>Solução alternativa individual de abastecimento de água (SAI):</b> Modalidade de abastecimento de água para consumo humano que atenda a domicílios residenciais com uma única família, incluindo seus agregados familiares.');
+
+    addItem('h3', '2.2 VIGILÂNCIA DA QUALIDADE DA ÁGUA PARA CONSUMO HUMANO');
+    addItem('p', 'A vigilância da qualidade da água é uma ação para verificar o padrão de potabilidade estabelecido na legislação vigente. O número mínimo de amostras mensais obrigatórias é estabelecido de acordo com a população do município. Daí a importância de fazer a coleta de água e alimentar o sistema de informação Sisagua.');
+    addItem('p', 'Os objetivos específicos do Programa Vigiagua são:');
+    addItem('ul', `
+      <li>Reduzir a morbimortalidade por doenças e agravos de transmissão hídrica;</li>
+      <li>Buscar a melhoria das condições sanitárias das diversas formas de abastecimento;</li>
+      <li>Avaliar e gerenciar o risco à saúde;</li>
+      <li>Monitorar sistematicamente a qualidade da água consumida pela população;</li>
+      <li>Informar a população sobre a qualidade da água e riscos à saúde;</li>
+      <li>Apoiar o desenvolvimento de ações de educação em saúde;</li>
+      <li>Coordenar o Sistema de Informação de Vigilância da Qualidade da Água (Sisagua).</li>
+    `);
+
+    addItem('h3', '2.3 IDENTIFICAÇÃO E INFORMAÇÕES GERAIS');
+    addItem('p', `<b>Instituição:</b> Secretaria Municipal de Saúde de ${municipio}`);
+    addItem('p', `<b>Município:</b> ${municipio}`);
+    addItem('p', `<b>População total:</b> ${Number(populacao || 0).toLocaleString('pt-BR')}`);
+    addItem('p', `<b>Endereço:</b> ${endereco}`);
+    addItem('p', `<b>Secretário(a) de Saúde:</b> ${secretario}`);
+    addItem('p', `<b>Responsável pela elaboração do Plano:</b> ${responsavel}`);
+    addItem('p', `<b>Ano Base:</b> ${ano}`);
+    addItem('p', `<b>Setor:</b> ${vigilancia}`);
+    addItem('p', `<b>Nome do(s) profissional(ais) capacitado(s) para realizar a coleta:</b> ${profissional}`);
+    addItem('p', '<b>Laboratório de Referência:</b> Laboratório de Análises de Água da UEM');
+    addItem('p', '<b>Endereço do Laboratório:</b> Avenida Colombo, nº5790, Jd. Universitário, CEP 87020-900, Maringá/PR (Bloco T20, sala 310, 3º andar).');
+
+    addItem('h3', '2.4 PARÂMETROS INDICADORES DA QUALIDADE DA ÁGUA PARA CONSUMO HUMANO');
+    addItem('p', 'Todas as amostras coletadas devem obedecer aos parâmetros para água potável em conformidade com os padrões físico-químicos e microbiológicos, conforme disposto na Portaria GM/MS nº 888/21.');
+    addItem('p', 'A Portaria GM/MS n° 888/2021 trata de alterações no Anexo XX da Portaria de Consolidação nº 5 que dispõe sobre os procedimentos de controle e de vigilância da qualidade da água para consumo humano e seu padrão de potabilidade. Toda água destinada ao consumo humano, distribuída coletivamente por meio de sistema, solução alternativa coletiva e individual de abastecimento de água ou carro-pipa, deve ser objeto de controle e vigilância conforme parâmetros constantes nesta Portaria.');
+    addItem('h3', '<b>Cloro residual livre</b>');
+    addItem('p', '<b>Pós-desinfecção/sistema de distribuição:</b>');
+    addItem('p', 'A concentração mínima de cloro residual livre estabelecida no padrão potabilidade <u>(0,20 mg/L)</u> refere-se ao residual mínimo que deve estar presente na água em toda a extensão do sistema de distribuição (reservatório e rede) como prevenção a uma possível (re)contaminação e/ou à proliferação de microrganismos no sistema de distribuição.');
+    addItem('p', 'Valores de cloro residual livre inferiores a 0,20 mg/L podem indicar falhas no processo de desinfecção, consumo excessivo do cloro residual no sistema de distribuição ou necessidade de pontos secundários de cloração (recloração) devido à extensão da rede de distribuição. Embora não ofereça riscos à saúde, <u>níveis de cloro residual livre superiores a 2,0 mg/L</u> (valor recomendado) podem causar rejeição da população (devido à manifestação de gosto e odor na água) e, consequentemente, a busca por fontes alternativas não seguras.');
+    addItem('p', 'Por fim, a concentração de 5,0 mg/L constitui o valor acima do qual representa riscos à saúde da população, ou seja, se uma amostra de água com concentração de <u>cloro residual livre for superior a 5,0 mg/L</u>, não atende ao padrão de potabilidade. Tal fato pode estar associado a problemas nos equipamentos de dosagem ou à aplicação de doses excessivas (superdosagens) com o intuito de compensar o consumo do desinfetante na rede.');
+    addItem('h3', '<b>Turbidez</b>');
+    addItem('p', '<b>Pós-desinfecção/sistema de distribuição:</b> Valores elevados de turbidez na água distribuída podem indicar ineficiência do tratamento ou o comprometimento do sistema de distribuição, por exemplo, devido a infiltrações na rede, formação de biofilmes ou intermitência do fornecimento de água. Em toda a extensão do sistema de distribuição (reservatório e rede) ou pontos de consumo deverá atender <u>ao VMP de 5,0 uT</u> para turbidez.');
+    addItem('h3', '<b>Coliformes Totais/Escherichia coli</b>');
+    addItem('p', 'O grupo dos coliformes totais contempla bactérias de vida livre, as quais podem ocorrer naturalmente no solo, na água e em plantas e não possuir qualquer relação com poluição da água por material fecal. Esse grupo de bactérias, em teoria, é mais resistente do que as bactérias patogênicas.');
+    addItem('p', 'Amostras de água tratada (submetida à desinfecção) devem ser submetidas à análise de coliformes totais e, o resultado da análise deve ser ausência; caso o resultado da análise seja positivo (presença de coliformes totais), exige-se a realização de análise específica para Escherichia coli.');
+    addItem('h3', '<b>Fluoreto</b>');
+    addItem('p', '<b>SAA ou SAC providos da etapa fluoretação:</b> o monitoramento visa à avaliação do controle operacional, em termos da dosagem de fluoreto aplicada, bem como a observação do VMP estabelecido no padrão de potabilidade. A concentração de fluoreto deve estar dentro do que recomenda a Portaria MS/GM nº 635, de 26 de dezembro de 1975, e não pode ultrapassar o <u>VMP definido no padrão de potabilidade (1,5 mg/L).</u>');
+    addItem('p', '<b>SAA, SAC ou SAI desprovidos da etapa fluoretação:</b> o monitoramento visa à verificação do atendimento do VMP estabelecido no padrão de potabilidade (1,5 mg/L). Quando encontrados valores que superam esse VMP, em se pensando no uso dessa água para consumo humano, deve ser avaliada a necessidade de implantação de tratamento específico para remoção de fluoreto, principalmente em localidades com histórico de ocorrência natural de fluoreto em concentrações elevadas.');
+    addItem('h3', '<b>Critérios de coleta</b>');
+    preview.appendChild(tabelaCriterios());
+
+    addItem('h2', '3. ANEXOS');
+    addItem('h3', '3.1 PONTOS DE COLETA — ANEXO 1');
+    addItem('p', `Cronograma anual com ${coletas.length} coleta${coletas.length !== 1 ? 's' : ''} programada${coletas.length !== 1 ? 's' : ''}, conforme plano publicado pela 12ª Regional de Saúde:`);
+    const tc = tabelaColetas();
+    if (tc) preview.appendChild(tc);
+
+    if (coletasExtras.length > 0) {
+      addItem('h3', '3.2 COLETAS EXTRAS — ANEXO 2');
+      addItem('p', `${coletasExtras.length} coleta${coletasExtras.length !== 1 ? 's' : ''} extra${coletasExtras.length !== 1 ? 's' : ''} fora do cronograma padrão:`);
+      preview.appendChild(tabelaExtras());
+    }
+
+    addItem('h2', '4. REFERÊNCIAS');
+    addItem('p', 'BRASIL. Ministério da Saúde. Secretaria de Vigilância em Saúde e Ambiente. Departamento de Vigilância em Saúde Ambiental e Saúde do Trabalhador. Curso básico de vigilância da qualidade da água para consumo humano: módulo III: qualidade de água para consumo humano: anula 2: planos de amostragem [recurso eletrônico] / Ministério da Saúde, Secretaria de Vigilância em Saúde Ambiental e Saúde do Trabalhador. - 2. ed. Brasília: Ministério da Saúde, 2025.');
+    addItem('p', 'BRASIL. Ministério da Saúde. Secretaria de Vigilância em Saúde Ambiental e Saúde do trabalhador, 2016.');
+    addItem('p', 'BRASIL. Decreto n. 79.367, de 9 de março de 1977.');
+    addItem('p', 'BRASIL. Ministério da Saúde. Anexo XX da Portaria de Consolidação nº5 de 2017, alterado pela Portaria de portaria GM/MS nº888 de 4 de maio de 2021.');
+    addItem('p', 'BRASIL. Ministério da Saúde. Boas práticas no abastecimento de água: procedimentos para a minimização de riscos à saúde, 2006.');
+    addItem('p', 'BRASIL. Ministério da Saúde. Inspeção sanitária em abastecimento de água, 2006.');
+    addItem('p', 'BRASIL. Ministério da Saúde. Diretriz nacional do plano de amostragem da vigilância ambiental em saúde relacionada à qualidade da água para consumo humano, 2016.');
+
+    // Assinatura
+    addItem('p', `Data de elaboração: ${new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' })}`);
+    addItem('p', '__________________________________________');
+    addItem('p', `${secretario}`);
+    addItem('p', 'Secretário(a) Municipal de Saúde');
+    addItem('p', `${municipio} — PR`);
+
+    _initPreviewEdicao(preview);
+  }
+
+  /* Liga edição contínua do preview: salvar ao digitar e ao reordenar,
+     e rastrear o bloco ativo para inserir novos elementos no lugar certo */
+  let _blocoAtivo = null;
+  function _initPreviewEdicao(preview) {
+    preview.oninput = _agendarSalvarPreview;
+    const marcarAtivo = e => {
+      const item = e.target.closest ? e.target.closest('.item-editable') : null;
+      if (item) _blocoAtivo = item;
+    };
+    preview.onfocusin = marcarAtivo;
+    preview.onclick   = marcarAtivo;
+    if (typeof Sortable !== 'undefined') {
+      Sortable.create(preview, { handle: '.drag-handle', animation: 150, onEnd: salvarEdicoesPreview });
+    }
+  }
+
+  /* Botões de edição do preview */
+  function adicionarTitulo()    { _addBloco('h2', 'Novo Título (clique para editar)'); }
+  function adicionarSubtitulo() { _addBloco('h3', 'Novo Subtítulo (clique para editar)'); }
+  function adicionarParagrafo() { _addBloco('p',  'Novo parágrafo. Clique para editar o texto...'); }
+  function adicionarLista()     { _addBloco('ul', '<li>Item 1</li><li>Item 2</li><li>Item 3</li>'); }
+
+  /* Insere o novo bloco logo APÓS o bloco em que a pessoa estava editando
+     (ou no fim, se nenhum estiver ativo), já focado e com o texto selecionado. */
+  function _addBloco(tag, conteudo) {
+    const preview = document.getElementById('previewContent');
+    const item = criarItem(tag, conteudo);
+    if (_blocoAtivo && preview.contains(_blocoAtivo)) {
+      _blocoAtivo.insertAdjacentElement('afterend', item);
+    } else {
+      preview.appendChild(item);
+    }
+    _blocoAtivo = item;
+    item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const el = item.querySelector('[contenteditable]');
+    if (el) {
+      el.focus();
+      try {
+        const r = document.createRange();
+        r.selectNodeContents(tag === 'ul' ? el.querySelector('li') || el : el);
+        const s = window.getSelection();
+        s.removeAllRanges(); s.addRange(r);
+      } catch (e) { /* seleção é conveniência */ }
+    }
+    _agendarSalvarPreview();
+  }
+  function aplicarFormatacao(cmd) {
+    document.execCommand(cmd, false, null);
+    _agendarSalvarPreview();
+  }
+
+  /* ═══════════════════════════════════════════
+     HELPERS DE PREVIEW
+     ═══════════════════════════════════════════ */
+  const _ALLOWED = new Set(['B','STRONG','I','EM','U','BR','UL','OL','LI']);
+
+  function _sanitize(html) {
+    const tpl = document.createElement('template');
+    tpl.innerHTML = String(html || '');
+    const clean = n => {
+      if (n.nodeType === Node.TEXT_NODE) return document.createTextNode(n.nodeValue || '');
+      if (n.nodeType !== Node.ELEMENT_NODE) return document.createTextNode('');
+      const tag = n.tagName;
+      if (!_ALLOWED.has(tag)) return document.createTextNode(n.textContent || '');
+      const el = document.createElement(tag.toLowerCase());
+      if (tag === 'BR') return el;
+      Array.from(n.childNodes).forEach(ch => el.appendChild(clean(ch)));
+      return el;
+    };
+    const f = document.createDocumentFragment();
+    Array.from(tpl.content.childNodes).forEach(n => f.appendChild(clean(n)));
+    return f;
+  }
+
+  function criarItem(tag, conteudo) {
+    const item   = document.createElement('div');
+    item.className = 'item-editable';
+    const handle = document.createElement('div');
+    handle.className = 'drag-handle';
+    handle.innerHTML = '⋮⋮';
+    const el = document.createElement(tag);
+    el.contentEditable = 'true';
+    el.setAttribute('contenteditable', 'true');
+    const str = String(conteudo ?? '');
+    if (/<\/?(b|strong|i|em|u|br|ul|ol|li)\b/i.test(str)) {
+      el.innerHTML = ''; el.appendChild(_sanitize(str));
+    } else { el.textContent = str; }
+    item.appendChild(handle);
+    item.appendChild(el);
+    return item;
+  }
+
+  function criarTabelaItem({ caption = '', head = [], rows = [] }) {
+    const item   = document.createElement('div');
+    item.className = 'item-editable';
+    const handle = document.createElement('div');
+    handle.className = 'drag-handle';
+    handle.innerHTML = '⋮⋮';
+
+    const table = document.createElement('table');
+    table.className = 'doc-table';
+    table.contentEditable = 'true';
+    table.setAttribute('contenteditable', 'true');
+
+    if (caption) {
+      const cap = document.createElement('caption');
+      cap.textContent = caption;
+      table.appendChild(cap);
+    }
+
+    const thead = document.createElement('thead');
+    const trh   = document.createElement('tr');
+    (head || []).forEach(h => {
+      const th = document.createElement('th');
+      th.textContent = String(h ?? '');
+      trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    (rows || []).forEach(r => {
+      const tr = document.createElement('tr');
+      (r || []).forEach(cell => {
+        const td = document.createElement('td');
+        td.innerHTML = String(cell ?? '');
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    item.appendChild(handle);
+    item.appendChild(table);
+    return item;
+  }
+
+  /* ═══════════════════════════════════════════
+     GERAR PDF
+     ═══════════════════════════════════════════ */
+  function gerarPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+    const municipio = document.getElementById('municipio').value;
+    const ano       = document.getElementById('ano').value;
+
+    let y = 20;
+
+    function addText(text, size = 10, bold = false, align = 'left', color = [0,0,0]) {
+      doc.setFontSize(size);
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      doc.setTextColor(...color);
+      const maxW = 170;
+      const lines = doc.splitTextToSize(String(text), maxW);
+      const lineH = size * 0.45;
+      lines.forEach(line => {
+        if (y > 275) { doc.addPage(); y = 20; }
+        const x = align === 'center' ? 105 : align === 'right' ? 190 : 20;
+        doc.text(line, x, y, { align });
+        y += lineH;
+      });
+      y += 2;
+    }
+
+    function addLine() {
+      doc.setDrawColor(200);
+      doc.line(20, y, 190, y);
+      y += 4;
+    }
+
+    function checkPage() {
+      if (y > 265) { doc.addPage(); y = 20; }
+    }
+
+    // ── CAPA (página 1) — padrão do documento oficial ──
+    const vigilanciaCapa = document.getElementById('vigilancia').value || 'Vigilância Sanitária';
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text(`PREFEITURA MUNICIPAL DE ${municipio.toUpperCase()}`, 105, 60, { align: 'center' });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    doc.text('Secretaria Municipal de Saúde', 105, 70, { align: 'center' });
+    doc.text(vigilanciaCapa, 105, 78, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('Plano de Amostragem de Vigilância da', 105, 130, { align: 'center' });
+    doc.text('Qualidade da Água para Consumo Humano', 105, 139, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`Ano: ${ano}`, 105, 200, { align: 'center' });
+    doc.text(`Município: ${municipio}`, 105, 209, { align: 'center' });
+    doc.text('Regional de Saúde: 12ª', 105, 218, { align: 'center' });
+    doc.addPage();
+
+    // Cabeçalho das páginas de conteúdo
+    doc.setFillColor(30, 58, 138);
+    doc.rect(0, 0, 210, 35, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(255, 255, 255);
+    doc.text('PLANO MUNICIPAL DE AMOSTRAGEM', 105, 14, { align: 'center' });
+    doc.text('QUALIDADE DA ÁGUA PARA CONSUMO HUMANO', 105, 21, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(`${municipio.toUpperCase()} — ${ano}`, 105, 29, { align: 'center' });
+
+    y = 44;
+    doc.setTextColor(0, 0, 0);
+
+    // Extrair conteúdo do preview
+    const preview = document.getElementById('previewContent');
+    const items   = Array.from(preview.querySelectorAll('.item-editable'));
+
+    /* ── Renderizador rico: preserva <b>/<i>/<u>, justifica e aplica recuo ──
+       Percorre os nós do bloco extraindo "runs" com estilo, quebra em linhas
+       medindo cada palavra na fonte correta, e desenha palavra a palavra. */
+    function _extrairRuns(node, estilo = { b: false, i: false, u: false }, runs = []) {
+      Array.from(node.childNodes).forEach(ch => {
+        if (ch.nodeType === Node.TEXT_NODE) {
+          if (ch.nodeValue) runs.push({ t: ch.nodeValue, ...estilo });
+        } else if (ch.nodeType === Node.ELEMENT_NODE) {
+          const tag = ch.tagName;
+          if (tag === 'BR') { runs.push({ t: '\n', ...estilo }); return; }
+          const novo = {
+            b: estilo.b || tag === 'B' || tag === 'STRONG',
+            i: estilo.i || tag === 'I' || tag === 'EM',
+            u: estilo.u || tag === 'U',
+          };
+          _extrairRuns(ch, novo, runs);
+        }
+      });
+      return runs;
+    }
+
+    function addRich(el, { size = 9, indent = 0, justify = true, extraLeft = 0 } = {}) {
+      const runs = _extrairRuns(el);
+
+      // Constrói palavras ATRAVESSANDO os runs de estilo: "Altônia" (negrito) + "." (normal)
+      // formam UMA palavra com dois segmentos — sem espaço espúrio antes da pontuação.
+      const palavras = [];
+      let atual = null;
+      const fechaPalavra = () => { if (atual && atual.segs.length) palavras.push(atual); atual = null; };
+      runs.forEach(r => {
+        for (const ch of String(r.t)) {
+          if (ch === '\n') { fechaPalavra(); palavras.push({ br: true }); continue; }
+          if (/\s/.test(ch)) { fechaPalavra(); continue; }
+          if (!atual) atual = { segs: [] };
+          const ult = atual.segs[atual.segs.length - 1];
+          if (ult && ult.b === r.b && ult.i === r.i && ult.u === r.u) ult.t += ch;
+          else atual.segs.push({ t: ch, b: r.b, i: r.i, u: r.u });
+        }
+      });
+      fechaPalavra();
+      if (!palavras.length) return;
+
+      const xLeft = 20 + extraLeft;
+      const maxW  = 170 - extraLeft;
+      const setF  = s => doc.setFont('helvetica', s.b && s.i ? 'bolditalic' : s.b ? 'bold' : s.i ? 'italic' : 'normal');
+      doc.setFontSize(size);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+      const spaceW = doc.getTextWidth(' ');
+
+      // Mede cada palavra (soma dos segmentos, cada um na sua fonte)
+      palavras.forEach(p => {
+        if (p.br) return;
+        p.pw = p.segs.reduce((s, seg) => { setF(seg); return s + doc.getTextWidth(seg.t); }, 0);
+      });
+
+      // Quebra em linhas (a primeira linha desconta o recuo)
+      const linhas = [];
+      let linha = [], somaPalavras = 0;
+      const dispon = primeira => maxW - (primeira ? indent : 0);
+      palavras.forEach(p => {
+        if (p.br) { linhas.push({ itens: linha, ultima: true }); linha = []; somaPalavras = 0; return; }
+        const avail = dispon(linhas.length === 0);
+        if (linha.length && somaPalavras + linha.length * spaceW + p.pw > avail) {
+          linhas.push({ itens: linha, ultima: false });
+          linha = []; somaPalavras = 0;
+        }
+        linha.push(p); somaPalavras += p.pw;
+      });
+      if (linha.length) linhas.push({ itens: linha, ultima: true });
+
+      const lineH = size * 0.5;
+      linhas.forEach((L, li) => {
+        if (y > 273) { doc.addPage(); y = 20; }
+        const primeira = li === 0;
+        let x = xLeft + (primeira ? indent : 0);
+        const avail = dispon(primeira);
+        const somaW = L.itens.reduce((s, p) => s + p.pw, 0);
+        const gaps  = L.itens.length - 1;
+        // Justifica todas as linhas exceto a última do parágrafo
+        const gap = (justify && !L.ultima && gaps > 0)
+          ? Math.max(spaceW, (avail - somaW) / gaps)
+          : spaceW;
+        L.itens.forEach(p => {
+          p.segs.forEach(seg => {
+            setF(seg);
+            const w = doc.getTextWidth(seg.t);
+            doc.text(seg.t, x, y);
+            if (seg.u) {
+              doc.setLineWidth(0.25);
+              doc.setDrawColor(0);
+              doc.line(x, y + 0.7, x + w, y + 0.7);
+            }
+            x += w;
+          });
+          x += gap;
+        });
+        y += lineH;
+      });
+      y += 2;
+    }
+
+    items.forEach(item => {
+      checkPage();
+      const el = item.querySelector('h1, h2, h3, p, ul, table');
+      if (!el) return;
+      // Blocos de texto esvaziados pelo usuário não entram no PDF
+      if (el.tagName !== 'TABLE' && !(el.textContent || '').trim()) return;
+      const tag  = el.tagName.toLowerCase();
+      const text = el.innerText || el.textContent || '';
+
+      if (tag === 'h1') {
+        addText(text, 14, true);
+        addLine();
+      } else if (tag === 'h2') {
+        checkPage();
+        y += 2;
+        addText(text, 11, true, 'left', [30, 58, 138]);
+      } else if (tag === 'h3') {
+        addText(text, 10, true);
+      } else if (tag === 'ul') {
+        Array.from(el.querySelectorAll('li')).forEach(li => {
+          if (!(li.textContent || '').trim()) return;
+          if (y > 273) { doc.addPage(); y = 20; }
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(0, 0, 0);
+          doc.text('•', 22, y);
+          addRich(li, { size: 9, indent: 0, justify: true, extraLeft: 6 });
+        });
+        y += 1;
+      } else if (tag === 'table') {
+        const head = Array.from(el.querySelectorAll('thead th')).map(th => th.textContent || '');
+        const body = Array.from(el.querySelectorAll('tbody tr')).map(tr =>
+          // A fonte padrão do jsPDF (Helvetica) não possui o glifo ✓ (sai como "&");
+          // no PDF usamos "X" para indicar o parâmetro selecionado.
+          Array.from(tr.querySelectorAll('td')).map(td => (td.textContent || '').replace(/\u2713/g, 'X'))
+        );
+        const cap = el.querySelector('caption')?.textContent || '';
+
+        if (cap) { addText(cap, 9, true); y += 1; }
+
+        if (head.length > 0 && body.length > 0) {
+          checkPage();
+          doc.autoTable({
+            startY:          y,
+            head:            [head],
+            body:            body,
+            styles:          { fontSize: 7, cellPadding: 2, lineColor: [200,200,200], lineWidth: 0.2 },
+            headStyles:      { fillColor: [30,58,138], textColor: 255, fontStyle: 'bold', fontSize: 7.5 },
+            alternateRowStyles: { fillColor: [248,250,252] },
+            margin:          { left: 20, right: 20 },
+          });
+          y = doc.lastAutoTable.finalY + 6;
+        }
+      } else {
+        // Parágrafo: justificado, com recuo de primeira linha (1,0 cm),
+        // preservando negrito, itálico e sublinhado do preview.
+        addRich(el, { size: 9, indent: 10, justify: true });
+      }
+    });
+
+    // Rodapé
+    const totalPags = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPags; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`VigiÁgua — 12ª Regional de Saúde do Paraná`, 20, 290);
+      doc.text(`Página ${i} de ${totalPags}`, 190, 290, { align: 'right' });
+    }
+
+    doc.save(`PlanoAmostragem_${municipio.replace(/\s+/g, '_')}_${ano}.pdf`);
+  }
+
+  /* ═══════════════════════════════════════════
+     AUTH
+     ═══════════════════════════════════════════ */
+  function sair() { DB.Auth.logoutAsync().finally(() => { window.location.href = 'index.html'; }); }
+  </script>
+</body>
+</html>

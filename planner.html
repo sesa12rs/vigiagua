@@ -1,0 +1,2489 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VigiÁgua — Planner Regional</title>
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    /* ══════════════════════════════════════════
+       LAYOUT GERAL
+       ══════════════════════════════════════════ */
+    .planner-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* ══════════════════════════════════════════
+       TABS — apenas 2
+       ══════════════════════════════════════════ */
+    .main-tabs {
+      display: flex;
+      background: var(--color-surface);
+      border-bottom: 2px solid var(--color-border);
+      position: sticky;
+      top: 60px;
+      z-index: 90;
+    }
+    .main-tab {
+      flex: 1;
+      padding: 16px 20px;
+      border: none;
+      background: transparent;
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--slate-500);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .main-tab:hover { color: var(--color-primary); }
+    .main-tab.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+      background: var(--blue-50);
+    }
+    .main-tab .tab-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      background: var(--blue-100);
+      color: var(--blue-700);
+    }
+    .main-tab.active .tab-badge {
+      background: var(--blue-600);
+      color: #fff;
+    }
+
+    /* ══════════════════════════════════════════
+       SEÇÕES COLAPSÁVEIS
+       ══════════════════════════════════════════ */
+    .secao {
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      background: var(--color-surface);
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: box-shadow .2s;
+    }
+    .secao:hover { box-shadow: var(--shadow-md); }
+    .secao.aberta { box-shadow: var(--shadow-md); border-color: var(--blue-200); }
+
+    .secao__header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      cursor: pointer;
+      user-select: none;
+      background: var(--color-surface);
+      transition: background .15s;
+    }
+    .secao__header:hover { background: var(--slate-50); }
+    .secao.aberta .secao__header { background: var(--blue-50); border-bottom: 1px solid var(--blue-100); }
+
+    .secao__icone {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .secao__titulo {
+      flex: 1;
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--slate-800);
+    }
+    .secao__status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .secao__resumo {
+      font-size: 12px;
+      color: var(--slate-500);
+      font-weight: 400;
+    }
+    .secao__chevron {
+      font-size: 14px;
+      color: var(--slate-400);
+      transition: transform .25s;
+      flex-shrink: 0;
+    }
+    .secao.aberta .secao__chevron { transform: rotate(180deg); }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot--ok      { background: var(--green-500); }
+    .status-dot--aviso   { background: var(--amber-500); }
+    .status-dot--vazio   { background: var(--slate-300); }
+
+    .secao__corpo {
+      display: none;
+      padding: 20px;
+      border-top: 1px solid var(--slate-100);
+    }
+    .secao.aberta .secao__corpo { display: block; }
+
+    /* Sub-blocos sempre visíveis dentro de um grupo */
+    .subsecao {
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      margin-bottom: 14px;
+      background: var(--slate-50);
+    }
+    .subsecao:last-child { margin-bottom: 0; }
+    .subsecao__cab {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .subsecao__icone { font-size: 15px; }
+    .subsecao__titulo {
+      font-family: var(--font-display);
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--slate-700);
+    }
+    .subsecao__hint {
+      font-size: 12px;
+      color: var(--slate-400);
+      font-weight: 400;
+    }
+
+    /* ══════════════════════════════════════════
+       BARRA DE AÇÃO INFERIOR (Gerar Plano)
+       ══════════════════════════════════════════ */
+    .gerar-bar {
+      position: sticky;
+      bottom: 0;
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      z-index: 80;
+      box-shadow: 0 -4px 16px rgba(0,0,0,.08);
+      flex-wrap: wrap;
+    }
+    .gerar-bar__info { font-size: 13px; color: var(--slate-500); flex: 1; }
+    .gerar-bar__info strong { color: var(--slate-700); display: block; font-size: 14px; }
+    .gerar-bar__acoes { display: flex; gap: 10px; align-items: center; }
+
+    /* Barra de contexto do Ano (topo, governa toda a aba) */
+    .ano-bar {
+      position: sticky;
+      top: 0;
+      z-index: 70;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      background: var(--gradient-header, var(--blue-700));
+      color: #fff;
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-md);
+    }
+    .ano-bar__ano { display: flex; flex-direction: column; gap: 6px; }
+    .ano-bar__ano > label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: rgba(255,255,255,.8);
+    }
+    .ano-bar__controls { display: flex; align-items: center; gap: 8px; }
+    .ano-bar__controls input[type="number"] {
+      font-family: var(--font-display);
+      font-size: 22px; font-weight: 800; text-align: center;
+      padding: 6px 12px; border-radius: var(--radius-md);
+      border: none; background: rgba(255,255,255,.95); color: var(--slate-800);
+      width: 130px;
+    }
+    .ano-bar__hint { font-size: 11.5px; color: rgba(255,255,255,.7); }
+    .ano-bar__acoes { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    @media (max-width: 640px) {
+      .ano-bar { flex-direction: column; align-items: stretch; }
+      .ano-bar__acoes { justify-content: flex-end; }
+    }
+
+    /* ══════════════════════════════════════════
+       RESULTADO — inline após gerar
+       ══════════════════════════════════════════ */
+    #secaoResultado {
+      display: none;
+      margin-top: 24px;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      border: 2px solid var(--green-200);
+      box-shadow: var(--shadow-lg);
+    }
+    #secaoResultado.visivel { display: block; }
+
+    .resultado-header {
+      background: var(--gradient-header);
+      color: #fff;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .resultado-header h2 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .resultado-header p { font-size: 13px; opacity: .8; }
+
+    .resultado-corpo { padding: 24px; background: var(--slate-50); }
+
+    .pub-banner {
+      background: var(--gradient-brand);
+      color: #fff;
+      border-radius: var(--radius-lg);
+      padding: 18px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .pub-banner h3 { font-family: var(--font-display); font-size: 15px; margin-bottom: 3px; }
+    .pub-banner p  { font-size: 13px; opacity: .85; }
+
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      border-radius: 20px; padding: 5px 14px;
+      font-size: 12px; font-weight: 700;
+    }
+    .status-pill--pub   { background: var(--green-100);  color: var(--green-700);  border: 1px solid var(--green-200); }
+    .status-pill--draft { background: var(--amber-100);  color: var(--amber-600);  border: 1px solid var(--amber-200); }
+
+    /* ── Painel de Planos por Ano ─────────────── */
+    .planos-tabela { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .planos-tabela th {
+      text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .03em; color: var(--slate-500);
+      border-bottom: 2px solid var(--slate-200);
+    }
+    .planos-tabela td { padding: 10px; border-bottom: 1px solid var(--slate-100); vertical-align: middle; }
+    .planos-tabela tr.plano-ativo { background: var(--blue-50); }
+    .planos-tabela tr:hover { background: var(--slate-50); }
+    .planos-tabela tr.plano-ativo:hover { background: var(--blue-50); }
+    .plano-ano-cell { font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--slate-800); }
+    .plano-ano-cell .tag-edit {
+      display: inline-block; margin-left: 8px; font-family: var(--font-sans); font-size: 10px;
+      font-weight: 700; letter-spacing: .03em; text-transform: uppercase;
+      background: var(--blue-600); color: #fff; border-radius: 10px; padding: 2px 8px; vertical-align: middle;
+    }
+    .plano-acoes { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .prazo-cell { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .prazo-cell input[type="date"] { padding: 4px 8px; border: 1px solid var(--slate-200); border-radius: 6px; font-size: 12.5px; }
+    .prazo-venceu { font-size: 11px; font-weight: 700; color: var(--red-700); background: var(--red-50); border-radius: 8px; padding: 1px 7px; }
+    .plano-vazio { padding: 22px; text-align: center; color: var(--slate-500); font-size: 13px;
+      background: var(--slate-50); border: 1px dashed var(--slate-300); border-radius: var(--radius-md); }
+    @media (max-width: 640px) {
+      .planos-tabela thead { display: none; }
+      .planos-tabela, .planos-tabela tbody, .planos-tabela tr, .planos-tabela td { display: block; width: 100%; }
+      .planos-tabela tr { border: 1px solid var(--slate-200); border-radius: var(--radius-md); margin-bottom: 10px; padding: 6px; }
+      .planos-tabela td { border: none; padding: 5px 8px; }
+      .plano-acoes { justify-content: flex-start; }
+    }
+
+    /* Meses */
+    /* ── Filtros ─────────────────────────────── */
+    .filtro-bar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin-bottom: 14px; padding: 12px 16px;
+      background: var(--slate-50); border: 1px solid var(--slate-200);
+      border-radius: var(--radius-md);
+    }
+    .filtro-busca { flex: 1; min-width: 180px; position: relative; }
+    .filtro-busca input {
+      width: 100%; padding: 7px 10px 7px 32px;
+      border: 1.5px solid var(--slate-300); border-radius: var(--radius-md);
+      font-size: 13px; font-family: var(--font-body); background: white;
+    }
+    .filtro-busca input:focus { border-color: var(--blue-500); outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+    .filtro-busca-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--slate-400); font-size: 13px; pointer-events: none; }
+    .filtro-sep { width: 1px; height: 22px; background: var(--slate-200); flex-shrink: 0; }
+    .fpill {
+      display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px;
+      border-radius: 20px; border: 1.5px solid var(--slate-300); background: white;
+      font-size: 12.5px; font-weight: 500; font-family: var(--font-body);
+      cursor: pointer; transition: all .15s; color: var(--slate-600); white-space: nowrap;
+    }
+    .fpill:hover { border-color: var(--blue-400); color: var(--blue-600); background: var(--blue-50); }
+    .fpill.ativo { border-color: var(--blue-500); background: var(--blue-600); color: #fff; font-weight: 600; }
+    .filtro-count { font-size: 12px; color: var(--slate-500); margin-left: auto; white-space: nowrap; }
+
+    /* Pills de mês */
+    .mes-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .mes-pill {
+      padding: 5px 14px; border-radius: 20px; border: 1.5px solid var(--slate-200);
+      background: white; font-size: 12.5px; font-weight: 500; cursor: pointer;
+      transition: all .15s; color: var(--slate-600); font-family: var(--font-body);
+    }
+    .mes-pill:hover { border-color: var(--blue-400); color: var(--blue-600); }
+    .mes-pill.ativo { border-color: var(--blue-500); background: var(--blue-600); color: #fff; font-weight: 600; }
+    .mes-pill--todos { background: var(--slate-100); border-color: var(--slate-300); }
+    .mes-pill--todos.ativo { background: var(--slate-700); border-color: var(--slate-700); color: #fff; }
+
+    /* Multi-select municípios (detalhamento) */
+    .mun-ms { position: relative; flex: 1; min-width: 200px; max-width: 380px; }
+    .mun-ms-trigger {
+      width: 100%; padding: 7px 30px 7px 12px; border: 1.5px solid var(--slate-300);
+      border-radius: var(--radius-md); font-size: 13px; font-family: var(--font-body);
+      background: white; cursor: pointer; text-align: left; color: var(--slate-700);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; transition: border-color .15s; user-select: none;
+    }
+    .mun-ms-trigger:hover { border-color: var(--blue-400); }
+    .mun-ms-trigger.open  { border-color: var(--blue-500); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+    .mun-ms-dropdown {
+      display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: white; border: 1.5px solid var(--blue-300); border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg); z-index: 200; max-height: 280px; overflow-y: auto;
+    }
+    .mun-ms-dropdown.open { display: block; }
+    .mun-ms-search { padding: 8px 10px; border-bottom: 1px solid var(--slate-100); position: sticky; top: 0; background: white; }
+    .mun-ms-search input { width: 100%; padding: 6px 10px; border: 1.5px solid var(--slate-200); border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font-body); }
+    .mun-ms-search input:focus { border-color: var(--blue-500); outline: none; }
+    .mun-ms-opt {
+      display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+      cursor: pointer; font-size: 13px; color: var(--slate-700); transition: background .1s;
+    }
+    .mun-ms-opt:hover { background: var(--blue-50); }
+    .mun-ms-opt input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--blue-600); flex-shrink: 0; }
+    .mun-ms-opt.sel { background: var(--blue-50); font-weight: 500; }
+    .mun-ms-foot {
+      display: flex; gap: 8px; padding: 8px 10px;
+      border-top: 1px solid var(--slate-100); background: var(--slate-50);
+      position: sticky; bottom: 0;
+    }
+
+    /* Destaque no detalhamento */
+    .semana-card.s-dim { opacity: .3; }
+    .mun-tag.t-hl  { background: var(--blue-600); color: #fff; border-color: var(--blue-600); font-weight: 700; }
+    .mun-tag.t-dim { opacity: .25; }
+    tr.r-dim { opacity: .3; }
+
+    .mes-bloco { margin-bottom: 24px; }
+    .mes-header {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--slate-800); color: #fff;
+      padding: 10px 16px; border-radius: var(--radius-md);
+      font-size: 14px; font-weight: 700; margin-bottom: 8px;
+    }
+    .semana-card {
+      background: var(--color-surface); border: 1px solid var(--slate-200);
+      border-radius: var(--radius-md); padding: 12px 16px; margin-bottom: 6px;
+    }
+    .semana-card__header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--slate-100);
+      font-size: 13px; flex-wrap: wrap; gap: 6px;
+    }
+    .mun-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--blue-50); color: var(--blue-700);
+      border: 1px solid var(--blue-200); padding: 3px 9px;
+      border-radius: 20px; margin: 2px; font-size: 12px; font-weight: 500;
+    }
+
+    /* ══════════════════════════════════════════
+       SEMANAS GRID (dentro da seção)
+       ══════════════════════════════════════════ */
+    .weeks-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap: 8px; }
+    .week-card {
+      background: var(--color-surface); border: 2px solid var(--slate-200);
+      border-radius: var(--radius-md); padding: 9px 12px;
+      cursor: pointer; transition: all .15s; position: relative;
+      user-select: none;
+    }
+    .week-card:hover  { border-color: var(--blue-400); box-shadow: var(--shadow-sm); }
+    .week-card.active { border-color: var(--blue-500); background: var(--blue-50); }
+    .week-card.inactive { border-color: var(--red-300); background: var(--red-50); opacity: .7; }
+    .week-card__status { position: absolute; top: 7px; right: 8px; font-size: 13px; }
+    .week-card__num  { font-weight: 700; font-size: 12.5px; color: var(--slate-700); }
+    .week-card__date { font-size: 11.5px; color: var(--color-text-muted); margin-top: 1px; }
+
+    /* ══════════════════════════════════════════
+       FERIADOS (dentro da seção semanas)
+       ══════════════════════════════════════════ */
+    .feriado-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; border-radius: var(--radius-md); margin-bottom: 5px;
+      font-size: 13px; border-left: 3px solid transparent;
+    }
+    .feriado-item--auto      { background: var(--slate-50);  border-color: var(--slate-300); opacity: .8; }
+    .feriado-item--nacional  { background: var(--red-50);    border-color: var(--red-500); }
+    .feriado-item--estadual  { background: var(--amber-50);  border-color: var(--amber-500); }
+    .feriado-item--municipal { background: var(--blue-50);   border-color: var(--blue-500); }
+
+    /* ══════════════════════════════════════════
+       MUNICÍPIOS (aba 2)
+       ══════════════════════════════════════════ */
+    .mun-row {
+      display: grid; grid-template-columns: 1fr auto;
+      align-items: center; gap: 12px; padding: 9px 14px;
+      border-radius: var(--radius-md); border: 1px solid var(--slate-100);
+      background: var(--slate-50); margin-bottom: 6px; cursor: pointer;
+      transition: all .15s;
+    }
+    .mun-row:hover { background: var(--blue-50); border-color: var(--blue-200); }
+    .mun-row__nome { font-size: 13.5px; font-weight: 500; }
+    .mun-row__sub  { font-size: 12px; color: var(--slate-400); margin-top: 2px; }
+    .mun-row__right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+
+    .regra-badge {
+      font-size: 11px; font-weight: 600; padding: 2px 8px;
+      border-radius: 20px; white-space: nowrap;
+    }
+    .regra-badge--custom { background: var(--blue-100);  color: var(--blue-700); }
+    .regra-badge--herda  { background: var(--slate-100); color: var(--slate-500); }
+
+    /* ══════════════════════════════════════════
+       MODO TOGGLE
+       ══════════════════════════════════════════ */
+    .modo-toggle {
+      display: flex; border-radius: var(--radius-md); overflow: hidden;
+      border: 1.5px solid var(--slate-300); width: fit-content;
+    }
+    .modo-toggle button {
+      padding: 7px 16px; border: none; background: var(--slate-100);
+      color: var(--slate-600); font-size: 13px; font-weight: 500;
+      font-family: var(--font-body); cursor: pointer; transition: all .15s;
+      border-right: 1px solid var(--slate-300);
+    }
+    .modo-toggle button:last-child { border-right: none; }
+    .modo-toggle button.ativo { background: var(--gradient-brand); color: #fff; font-weight: 600; }
+
+    /* ══════════════════════════════════════════
+       PARAM ROW
+       ══════════════════════════════════════════ */
+    .param-row {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .param-row label {
+      min-width: 200px; font-size: 13px;
+      font-weight: 600; color: var(--slate-700);
+    }
+    .param-control { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    /* ══════════════════════════════════════════
+       MODAL
+       ══════════════════════════════════════════ */
+    .modal--lg { max-width: 600px; }
+    .regra-section-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .6px; color: var(--slate-400); margin: 16px 0 8px;
+    }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE
+       ══════════════════════════════════════════ */
+    @media (max-width: 768px) {
+      .secao__corpo { padding: 14px; }
+      .gerar-bar { padding: 12px 14px; }
+      .resultado-corpo { padding: 14px; }
+      .param-row label { min-width: unset; width: 100%; }
+      .main-tab { font-size: 13px; padding: 14px 12px; }
+    }
+  </style>
+</head>
+<body class="page-wrapper">
+
+<!-- ══ TOPBAR ══════════════════════════════════ -->
+<header class="topbar">
+  <a href="index.html" class="topbar__logo">
+    <div class="topbar__logo-icon">💧</div>
+    VigiÁgua
+  </a>
+  <div class="topbar__title">Planejamento Regional — 12ª RS</div>
+  <div class="topbar__right">
+    <span class="topbar__user">
+      <span class="topbar__user-badge">Regional</span>
+      <span id="nomeUsuario">—</span>
+    </span>
+    <button class="topbar__btn" onclick="sair()">🚪 Sair</button>
+  </div>
+</header>
+
+<!-- ══ TABS PRINCIPAIS ══════════════════════════ -->
+<div class="main-tabs">
+  <button class="main-tab active" id="tabBtn1" onclick="trocarTab(1)">
+    ⚙️ Planejamento
+    <span class="tab-badge" id="badgePlanejamento">2026</span>
+  </button>
+  <button class="main-tab" id="tabBtn2" onclick="trocarTab(2)">
+    🏘️ Municípios
+    <span class="tab-badge" id="badgeMunicipios">21</span>
+  </button>
+</div>
+
+<!-- ══ CONTEÚDO ═════════════════════════════════ -->
+<main class="page-content">
+
+  <!-- ════════════════════════════════════════════
+       TAB 1 — PLANEJAMENTO
+       ════════════════════════════════════════════ -->
+  <div id="tab1" class="planner-layout">
+
+    <!-- ════════════════════════════════════════════
+         BARRA DE CONTEXTO — Ano + ações (governa toda a aba)
+         ════════════════════════════════════════════ -->
+    <div class="ano-bar">
+      <div class="ano-bar__ano">
+        <label for="anoInput">Ano em planejamento</label>
+        <div class="ano-bar__controls">
+          <input type="number" id="anoInput" min="1900" max="9999" inputmode="numeric"
+                 onchange="irParaAno(this.value)"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+        </div>
+        <span class="ano-bar__hint">Digite o ano e tecle Enter. Anos já planejados aparecem na tabela abaixo; trocar o ano recarrega semanas e feriados.</span>
+      </div>
+      <div class="ano-bar__acoes">
+        <div id="statusPlanoTopo"></div>
+        <button class="btn btn--secondary" onclick="salvarConfig()">💾 Salvar</button>
+        <button class="btn btn--primary btn--lg" onclick="gerarPlano()">🚀 Gerar Plano</button>
+      </div>
+    </div>
+
+    <!-- Ano em edição — fonte única de verdade (sincronizado com o seletor acima) -->
+    <input type="hidden" id="cfgAno">
+
+    <!-- ════════════════════════════════════════════
+         GRUPO A — PLANOS POR ANO (ciclo de vida + publicação)
+         ════════════════════════════════════════════ -->
+    <div class="secao aberta" id="secPlanos">
+      <div class="secao__header" onclick="toggleSecao('secPlanos')">
+        <span class="secao__icone">🗂️</span>
+        <div class="secao__titulo">Planos por Ano</div>
+        <div class="secao__status">
+          <span class="secao__resumo" id="resumoPlanos">—</span>
+        </div>
+        <span class="secao__chevron">▼</span>
+      </div>
+      <div class="secao__corpo">
+
+        <!-- Contexto do ano em edição -->
+        <div id="anoContexto" style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--slate-700);line-height:1.5;"></div>
+
+        <!-- Lista de planos (prazo de edição é editável por linha) -->
+        <div id="painelPlanos"></div>
+
+      </div>
+    </div>
+
+    <!-- marcador removido (cfgAno agora fica no topo) -->
+
+    <!-- ════════════════════════════════════════════
+         GRUPO B — REGRAS DE DISTRIBUIÇÃO
+         ════════════════════════════════════════════ -->
+    <div class="secao aberta" id="secRegras">
+      <div class="secao__header" onclick="toggleSecao('secRegras')">
+        <span class="secao__icone">⚙️</span>
+        <div class="secao__titulo">Regras de Distribuição</div>
+        <div class="secao__status">
+          <span class="secao__resumo" id="resumoRegras">—</span>
+          <span class="status-dot status-dot--ok" id="dotRegras"></span>
+        </div>
+        <span class="secao__chevron">▼</span>
+      </div>
+      <div class="secao__corpo">
+        <div style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--blue-800);line-height:1.7;">
+          O sistema garante automaticamente: <strong id="infoMunAlvo">10 municípios por viagem</strong>, quantidade uniforme por visita, 100% das metas e distribuição equilibrada ao longo do ano. Configure apenas os limites abaixo.
+        </div>
+
+        <!-- Sub-bloco: Laboratório -->
+        <div class="subsecao">
+          <div class="subsecao__cab">
+            <span class="subsecao__icone">🧪</span>
+            <span class="subsecao__titulo">Capacidade do laboratório / semana</span>
+            <span class="subsecao__hint">frascos tipo A que o laboratório processa por semana</span>
+          </div>
+          <div class="param-row">
+            <label>Modo</label>
+            <div class="param-control">
+              <div class="modo-toggle" id="toggleModoCapacidade">
+                <button onclick="setModoCapacidade('exato')"     id="btnCapExato">Número fixo</button>
+                <button onclick="setModoCapacidade('intervalo')" id="btnCapIntervalo">Mínimo e máximo</button>
+              </div>
+            </div>
+          </div>
+          <div id="camposCapExato" class="param-row">
+            <label>Número fixo</label>
+            <div class="param-control">
+              <input type="number" id="cfgCapacidadeExata" min="1" style="width:90px;" placeholder="Sem limite" oninput="renderResumos();">
+              <span class="form-hint">frascos/semana (teto). Deixe vazio para sem limite.</span>
+            </div>
+          </div>
+          <div id="camposCapIntervalo" class="param-row" style="display:none;">
+            <label>Intervalo</label>
+            <div class="param-control">
+              <input type="number" id="cfgCapacidadeMin" min="1" style="width:75px;" placeholder="Mín" oninput="renderResumos();">
+              <span style="color:var(--slate-400);">até</span>
+              <input type="number" id="cfgCapacidadeMax" min="1" style="width:75px;" placeholder="Máx" oninput="renderResumos();">
+              <span class="form-hint">frascos/semana — o máximo é o teto respeitado pelo sistema</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-bloco: Alerta de frascos por semana -->
+        <div class="subsecao">
+          <div class="subsecao__cab">
+            <span class="subsecao__icone">🔔</span>
+            <span class="subsecao__titulo">Alerta de frascos / semana</span>
+            <span class="subsecao__hint">avisa se a semana ficar com poucos ou muitos frascos (não altera a geração)</span>
+          </div>
+          <div class="param-row">
+            <label>Modo</label>
+            <div class="param-control">
+              <div class="modo-toggle" id="toggleModoAlerta">
+                <button onclick="setModoAlerta('exato')"     id="btnAlertaExato">Número fixo</button>
+                <button onclick="setModoAlerta('intervalo')" id="btnAlertaIntervalo">Mínimo e máximo</button>
+              </div>
+            </div>
+          </div>
+          <div id="camposAlertaExato" class="param-row">
+            <label>
+              Número fixo
+              <span class="form-hint" style="font-weight:400;display:block;">Avisa quando a semana tiver menos frascos que este valor.</span>
+            </label>
+            <div class="param-control">
+              <input type="number" id="cfgAlertaExata" min="0" style="width:90px;" placeholder="Ex: 48">
+              <span class="form-hint">frascos mínimos/semana</span>
+            </div>
+          </div>
+          <div id="camposAlertaIntervalo" class="param-row" style="display:none;">
+            <label>
+              Intervalo
+              <span class="form-hint" style="font-weight:400;display:block;">Avisa quando a semana ficar abaixo do mínimo (poucos) ou acima do máximo (muitos).</span>
+            </label>
+            <div class="param-control">
+              <input type="number" id="cfgAlertaMin" min="0" style="width:75px;" placeholder="Mín">
+              <span style="color:var(--slate-400);">até</span>
+              <input type="number" id="cfgAlertaMax" min="0" style="width:75px;" placeholder="Máx">
+              <span class="form-hint">frascos/semana</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-bloco: Por viagem -->
+        <div class="subsecao">
+          <div class="subsecao__cab">
+            <span class="subsecao__icone">🚐</span>
+            <span class="subsecao__titulo">Municípios por semana</span>
+            <span class="subsecao__hint">quantos municípios participam de cada terça-feira</span>
+          </div>
+          <div class="param-row">
+            <label>Modo</label>
+            <div class="param-control">
+              <div class="modo-toggle" id="toggleModoMuns">
+                <button onclick="setModoMuns('exato')"    id="btnMunsExato">Número fixo</button>
+                <button onclick="setModoMuns('intervalo')" id="btnMunsIntervalo">Mínimo e máximo</button>
+              </div>
+            </div>
+          </div>
+          <div id="camposMunsExato" class="param-row">
+            <label>
+              Número fixo
+              <span class="form-hint" style="font-weight:400;display:block;">Padrão da 12ª RS: 10 municípios (incluindo Umuarama)</span>
+            </label>
+            <div class="param-control">
+              <input type="number" id="cfgMunicipiosExato" min="1" max="30" style="width:90px;" placeholder="10" oninput="renderResumos();">
+              <span class="form-hint">municípios por semana</span>
+            </div>
+          </div>
+          <div id="camposMunsIntervalo" class="param-row" style="display:none;">
+            <label>Intervalo</label>
+            <div class="param-control">
+              <input type="number" id="cfgMunicipiosMin" min="1" max="30" style="width:75px;" placeholder="Mín" oninput="renderResumos();">
+              <span style="color:var(--slate-400);">até</span>
+              <input type="number" id="cfgMunicipiosMax" min="1" max="30" style="width:75px;" placeholder="Máx" oninput="renderResumos();">
+              <span class="form-hint">municípios por semana</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sub-bloco: Por participação municipal -->
+        <div class="subsecao">
+          <div class="subsecao__cab">
+            <span class="subsecao__icone">💧</span>
+            <span class="subsecao__titulo">Frascos por município / semana</span>
+            <span class="subsecao__hint">frascos que cada município entrega quando participa</span>
+          </div>
+          <div class="param-row">
+            <label>Modo</label>
+            <div class="param-control">
+              <div class="modo-toggle" id="toggleModoEntrega">
+                <button onclick="setModoEntrega('exato')"    id="btnEntregaExato">Quantidade fixa</button>
+                <button onclick="setModoEntrega('intervalo')" id="btnEntregaIntervalo">Mínimo e máximo</button>
+              </div>
+            </div>
+          </div>
+          <div id="camposEntregaExato" class="param-row" style="display:none;">
+            <label>Quantidade fixa</label>
+            <div class="param-control">
+              <input type="number" id="cfgEntregaExata" min="1" max="50" style="width:90px;" placeholder="Ex: 5" oninput="renderResumos();">
+              <span class="form-hint">frascos tipo A por participação</span>
+            </div>
+          </div>
+          <div id="camposEntregaIntervalo" class="param-row">
+            <label>
+              Intervalo
+              <span class="form-hint" style="font-weight:400;display:block;">Mínimo recomendado: 4 (abaixo disso a viagem não se justifica economicamente)</span>
+            </label>
+            <div class="param-control">
+              <input type="number" id="cfgEntregaMin" min="1" max="50" style="width:75px;" placeholder="Mín" oninput="renderResumos();">
+              <span style="color:var(--slate-400);">até</span>
+              <input type="number" id="cfgEntregaMax" min="1" max="50" style="width:75px;" placeholder="Máx" oninput="renderResumos();">
+              <span class="form-hint">frascos tipo A</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════
+         GRUPO C — CALENDÁRIO DO ANO (semanas + feriados)
+         ════════════════════════════════════════════ -->
+    <div class="secao" id="secCalendario">
+      <div class="secao__header" onclick="toggleSecao('secCalendario')">
+        <span class="secao__icone">🗓️</span>
+        <div class="secao__titulo">Calendário do Ano</div>
+        <div class="secao__status">
+          <span class="secao__resumo" id="resumoCalendario">—</span>
+          <span class="status-dot status-dot--ok" id="dotCalendario"></span>
+        </div>
+        <span class="secao__chevron">▼</span>
+      </div>
+      <div class="secao__corpo">
+        <div style="background:var(--slate-100);border:1px solid var(--slate-200);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:var(--slate-600);line-height:1.6;">
+          As <strong>semanas ativas</strong> e os <strong>feriados</strong> definem juntos em quais semanas existe coleta.
+        </div>
+
+        <!-- Sub-bloco: Semanas Ativas -->
+        <div class="subsecao">
+          <div class="subsecao__cab">
+            <span class="subsecao__icone">🗓️</span>
+            <span class="subsecao__titulo">Semanas Ativas</span>
+            <span class="subsecao__hint" id="hintSemanas"></span>
+          </div>
+          <div style="background:var(--color-surface);border:1px solid var(--slate-200);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--slate-600);line-height:1.7;">
+            Clique em qualquer semana para ativar ou desativar manualmente.
+            <strong>Recesso de janeiro e dezembro</strong> e <strong>feriados nacionais na quarta-feira</strong> são bloqueados automaticamente ao trocar de ano.
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+            <button class="btn btn--secondary btn--sm" onclick="ativarTodas()">✅ Ativar todas</button>
+            <button class="btn btn--warning btn--sm"   onclick="reaplicarFerias()">🔄 Reaplicar recesso</button>
+            <button class="btn btn--secondary btn--sm" onclick="ativarSoFeriadosNac()">🎉 Só feriados nac.</button>
+          </div>
+          <div class="stats-row" id="semanasResumo" style="margin-bottom:16px;"></div>
+          <div class="weeks-grid" id="semanasGrid"></div>
+        </div>
+
+        <!-- Sub-bloco: Feriados -->
+        <div class="subsecao">
+          <div class="subsecao__cab">
+            <span class="subsecao__icone">🎉</span>
+            <span class="subsecao__titulo">Feriados</span>
+            <span class="subsecao__hint" id="hintFeriados"></span>
+          </div>
+          <div style="background:var(--amber-50);border:1px solid var(--amber-200);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--amber-700);line-height:1.7;">
+            <strong>Feriados nacionais</strong> são calculados automaticamente (Páscoa, Natal, etc.) e aparecem em cinza.
+            <strong>Feriado nacional/estadual na quarta-feira</strong> → semana inteira inativa.
+            <strong>Feriado municipal na terça ou quarta</strong> → apenas aquele município é redistribuído naquela semana.
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;background:var(--color-surface);border:1px solid var(--slate-200);border-radius:var(--radius-md);padding:14px;margin-bottom:16px;">
+            <div class="form-group" style="min-width:90px;flex:0 0 auto;">
+              <label>Data (dd/mm)</label>
+              <input type="text" id="ferData" placeholder="25/12" maxlength="5" style="width:90px;">
+            </div>
+            <div class="form-group">
+              <label>Tipo</label>
+              <select id="ferTipo" onchange="toggleFerMun()">
+                <option value="nacional">Nacional</option>
+                <option value="estadual">Estadual</option>
+                <option value="municipal">Municipal</option>
+              </select>
+            </div>
+            <div class="form-group" id="ferMunGroup" style="display:none;">
+              <label>Município</label>
+              <select id="ferMunicipio"></select>
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button class="btn btn--primary btn--sm" onclick="adicionarFeriado()">➕ Adicionar</button>
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button class="btn btn--secondary btn--sm" onclick="resetarFeriados()">🔄 Restaurar padrão</button>
+            </div>
+          </div>
+          <div id="feriadosList"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- (Barra Gerar movida para o topo — ver .ano-bar) -->
+
+    <!-- RESULTADO (aparece aqui após gerar) -->
+    <div id="secaoResultado">
+    <div class="resultado-header" id="resultadoHeader">
+      <div>
+        <h2 id="resultadoTitulo">Plano Gerado</h2>
+        <p id="resultadoSub">—</p>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;" id="resultadoAcoes"></div>
+    </div>
+      <div class="resultado-corpo">
+        <div id="validacaoBox"></div>
+        <div id="resultadosContent"></div>
+        <div id="detalhesContent" style="margin-top:24px;"></div>
+      </div>
+    </div>
+
+  </div><!-- /tab1 -->
+
+  <!-- ════════════════════════════════════════════
+       TAB 2 — MUNICÍPIOS
+       ════════════════════════════════════════════ -->
+  <div id="tab2" style="display:none;max-width:960px;margin:0 auto;">
+
+    <div class="section-header">
+      <h2 class="section-header__title">🏘️ Metas e Regras por Município</h2>
+      <div class="section-header__actions">
+        <button class="btn btn--secondary btn--sm" onclick="resetarMetas()">🔄 Restaurar padrão</button>
+        <button class="btn btn--success btn--sm"   onclick="salvarMetas()">💾 Salvar</button>
+      </div>
+    </div>
+
+    <div class="alert alert--info" style="margin-bottom:20px;">
+      <span class="alert__icon">🎯</span>
+      <div class="alert__body">
+        Clique em um município para definir regras individuais de quantidade por visita.
+        Municípios sem regras próprias herdam os parâmetros globais definidos na aba Planejamento.
+        <strong>Badge azul</strong> = regra personalizada.
+      </div>
+    </div>
+
+    <div class="stats-row" id="metaStats" style="margin-bottom:16px;"></div>
+    <div class="card">
+      <div id="municipiosList"></div>
+    </div>
+  </div><!-- /tab2 -->
+
+</main>
+
+<!-- ══ MODAL REGRAS DO MUNICÍPIO ══════════════ -->
+<div class="modal-overlay" id="modalRegras">
+  <div class="modal modal--lg">
+    <div class="modal__header">
+      <span class="modal__title" id="modalRegrasTitle">Regras — Município</span>
+      <button class="modal__close" onclick="fecharModalRegras()">✕</button>
+    </div>
+    <div class="modal__body" id="modalRegrasBody"></div>
+    <div class="modal__footer">
+      <button class="btn btn--secondary"  onclick="fecharModalRegras()">Cancelar</button>
+      <button class="btn btn--danger btn--sm" onclick="resetarRegrasModal()">🔄 Herdar global</button>
+      <button class="btn btn--success"    onclick="salvarRegrasModal()">💾 Salvar regras</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL EDITAR FERIADO ════════════════════ -->
+<div class="modal-overlay" id="modalFeriado">
+  <div class="modal">
+    <div class="modal__header">
+      <span class="modal__title">✏️ Editar Feriado</span>
+      <button class="modal__close" onclick="fecharModalFeriado()">✕</button>
+    </div>
+    <div class="modal__body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Data (dd/mm)</label>
+          <input type="text" id="editFerData" maxlength="5" placeholder="25/12">
+        </div>
+        <div class="form-group">
+          <label>Tipo</label>
+          <select id="editFerTipo" onchange="toggleEditFerMun()">
+            <option value="nacional">Nacional</option>
+            <option value="estadual">Estadual</option>
+            <option value="municipal">Municipal</option>
+          </select>
+        </div>
+        <div class="form-group form-group--full" id="editFerMunGroup" style="display:none;">
+          <label>Município</label>
+          <select id="editFerMunicipio"></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--secondary" onclick="fecharModalFeriado()">Cancelar</button>
+      <button class="btn btn--success"   onclick="salvarEdicaoFeriado()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/data.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/planner.js"></script>
+<script>
+/* ════════════════════════════════════════════
+   ESTADO GLOBAL
+   ════════════════════════════════════════════ */
+let municipios    = [];
+let feriados      = {};
+let tercas        = [];
+let semanasAtivas = [];
+let planoAtual    = null;
+let munEditIdx    = null;
+let ferEditRef    = null;
+
+/* ════════════════════════════════════════════
+   INIT
+   ════════════════════════════════════════════ */
+function init() {
+  const s = DB.Auth.exigirPerfil('regional');
+  document.getElementById('nomeUsuario').textContent = s.nome;
+
+  municipios = DB.Municipios.listar();
+  feriados   = DB.Feriados.carregar();
+
+  carregarConfigUI();
+  inicializarSemanas();
+
+  sincronizarAnoInput();
+  renderResumos();
+  renderMunicipios();
+  renderSemanasGrid();
+  renderFeriados();
+  renderStatusPlano();
+  renderPainelPlanos();
+  atualizarAnoContexto();
+
+  // Carrega o plano do ANO atualmente no formulário (não "o mais recente"),
+  // mantendo formulário e resultado sempre coerentes.
+  const anoForm = parseInt(document.getElementById('cfgAno').value) || null;
+  planoAtual = anoForm ? DB.Plano.carregar(anoForm) : null;
+  if (planoAtual && planoAtual.ok) mostrarResultado();
+}
+if (DB.Sync.habilitado()) { DB.Sync.ready.then(init); } else { init(); }
+
+/* ════════════════════════════════════════════
+   TABS
+   ════════════════════════════════════════════ */
+function trocarTab(n) {
+  document.getElementById('tab1').style.display = n === 1 ? 'block' : 'none';
+  document.getElementById('tab2').style.display = n === 2 ? 'block' : 'none';
+  document.getElementById('tabBtn1').classList.toggle('active', n === 1);
+  document.getElementById('tabBtn2').classList.toggle('active', n === 2);
+}
+
+/* ════════════════════════════════════════════
+   SEÇÕES COLAPSÁVEIS
+   ════════════════════════════════════════════ */
+function toggleSecao(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('aberta');
+}
+
+function abrirSecao(id) {
+  document.getElementById(id).classList.add('aberta');
+  document.getElementById(id).scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+/* ════════════════════════════════════════════
+   RESUMOS DOS CABEÇALHOS
+   ════════════════════════════════════════════ */
+/* ════════════════════════════════════════════
+   HELPERS DE RESUMO — funções puras que
+   constroem textos de exibição sem nunca
+   mostrar "null", "undefined" ou "?"
+   ════════════════════════════════════════════ */
+
+// Retorna texto descritivo dos frascos por visita com base no modo ativo
+function textoFrascos() {
+  const exato = document.getElementById('btnEntregaExato').classList.contains('ativo');
+  if (exato) {
+    const v = parseNum('cfgEntregaExata');
+    return v ? `${v} frascos/visita (fixo)` : 'Frascos fixo (sem valor)';
+  }
+  const mn = parseNum('cfgEntregaMin');
+  const mx = parseNum('cfgEntregaMax');
+  if (mn && mx) return `${mn}–${mx} frascos`;
+  if (mn)       return `≥${mn} frascos`;
+  if (mx)       return `≤${mx} frascos`;
+  return 'Frascos (sem limite)';
+}
+
+// Retorna texto descritivo dos municípios por semana com base no modo ativo
+function textoMunicipios() {
+  const exato = document.getElementById('btnMunsExato').classList.contains('ativo');
+  if (exato) {
+    const v = parseNum('cfgMunicipiosExato');
+    return `${v || 10} municípios/semana`;
+  }
+  const mn = parseNum('cfgMunicipiosMin');
+  const mx = parseNum('cfgMunicipiosMax');
+  if (mn && mx) return `${mn}–${mx} municípios/semana`;
+  if (mn)       return `≥${mn} municípios/semana`;
+  if (mx)       return `≤${mx} municípios/semana`;
+  return 'Municípios/semana (sem valor)';
+}
+
+// Atualiza o texto azul dentro da seção de parâmetros
+function updateInfoMunAlvo() {
+  const el = document.getElementById('infoMunAlvo');
+  if (el) el.textContent = textoMunicipios();
+}
+
+// Atualiza TODOS os resumos de cabeçalho de seção de uma vez
+function renderResumos() {
+  // Ano (alimenta o badge da aba — fonte única: cfgAno)
+  const ano = parseInt(document.getElementById('cfgAno').value) || 2026;
+  document.getElementById('badgePlanejamento').textContent = ano;
+
+  // GRUPO B — Regras de Distribuição
+  const capExatoAtivo = document.getElementById('btnCapExato')?.classList.contains('ativo');
+  let capacTxt;
+  if (capExatoAtivo) {
+    const v = parseNum('cfgCapacidadeExata');
+    capacTxt = v ? `${v}/sem` : 'sem limite';
+  } else {
+    const mn = parseNum('cfgCapacidadeMin'), mx = parseNum('cfgCapacidadeMax');
+    capacTxt = mx ? `${mn || '?'}–${mx}/sem` : 'sem limite';
+  }
+  const rRegras = document.getElementById('resumoRegras');
+  if (rRegras) rRegras.textContent = `${textoMunicipios()} · ${textoFrascos()} · lab ${capacTxt}`;
+
+  // GRUPO C — Calendário (semanas + feriados)
+  const ativas  = semanasAtivas.filter(Boolean).length;
+  const nExtras = (feriados.nacionais?.length || 0) + (feriados.estaduais?.length || 0) +
+    Object.values(feriados.municipais || {}).reduce((s, v) => s + v.length, 0);
+  const feriadosTxt = nExtras > 0 ? `13 automáticos + ${nExtras} extras` : '13 automáticos';
+
+  const rCal = document.getElementById('resumoCalendario');
+  if (rCal) rCal.textContent = `${ativas} semanas ativas · ${nExtras > 0 ? nExtras + ' feriados extras' : 'feriados padrão'}`;
+  const dotCal = document.getElementById('dotCalendario');
+  if (dotCal) dotCal.className = `status-dot status-dot--${ativas > 0 ? 'ok' : 'aviso'}`;
+
+  const hintSem = document.getElementById('hintSemanas');
+  if (hintSem) hintSem.textContent = `${ativas} de ${tercas.length}`;
+  const hintFer = document.getElementById('hintFeriados');
+  if (hintFer) hintFer.textContent = feriadosTxt;
+
+  // Municípios badge (outra aba)
+  document.getElementById('badgeMunicipios').textContent = municipios.length;
+
+  // Texto azul interno (infoMunAlvo)
+  updateInfoMunAlvo();
+}
+
+/* ════════════════════════════════════════════
+   ANO — sincronizado
+   ════════════════════════════════════════════ */
+function onAnoChange(val) {
+  const ano = parseInt(val) || 2026;
+  document.getElementById('cfgAno').value = ano;
+  tercas = Utils.tercasFeirasDoAno(ano);
+  const salvas = DB.Semanas.carregar(ano);
+  semanasAtivas = (salvas && salvas.length === tercas.length)
+    ? salvas
+    : calcularSemanasDefault(ano);
+  DB.Semanas.salvar(ano, semanasAtivas);
+  renderSemanasGrid();
+  renderResumos();
+  renderPainelPlanos();
+  atualizarAnoContexto();
+  if (typeof sincronizarAnoInput === 'function') sincronizarAnoInput();
+}
+
+/* ════════════════════════════════════════════
+   PAINEL DE PLANOS POR ANO
+   ════════════════════════════════════════════ */
+function renderPainelPlanos() {
+  const wrap = document.getElementById('painelPlanos');
+  if (!wrap) return;
+
+  const resumos = DB.Plano.resumos();
+  const anoEdit = parseInt(document.getElementById('cfgAno').value) || null;
+
+  // Resumo no cabeçalho da seção
+  const nPub  = resumos.filter(r => r.status === 'publicado').length;
+  const nRas  = resumos.length - nPub;
+  const resEl = document.getElementById('resumoPlanos');
+  if (resEl) {
+    resEl.textContent = resumos.length === 0
+      ? 'Nenhum plano ainda'
+      : `${resumos.length} ano(s) · ${nPub} publicado(s) · ${nRas} rascunho(s)`;
+  }
+
+  if (resumos.length === 0) {
+    wrap.innerHTML = `<div class="plano-vazio">
+      Nenhum plano criado ainda. Digite o ano na barra acima, ajuste os parâmetros e clique em
+      <strong>Gerar Plano</strong>.
+    </div>`;
+    return;
+  }
+
+  // Mais recentes primeiro
+  const linhas = [...resumos].sort((a, b) => b.ano - a.ano).map(r => {
+    const ativo = r.ano === anoEdit;
+    const statusBadge = r.status === 'publicado'
+      ? `<span class="badge badge--success">🟢 Publicado</span>`
+      : `<span class="badge badge--warning">🟡 Rascunho</span>`;
+
+    const taxa = r.taxa != null ? `${(r.taxa * 100).toFixed(0)}%` : '—';
+    const amostras = r.totalDist != null ? `${r.totalDist.toLocaleString('pt-BR')} amostras` : '';
+
+    const gerado = r.geradoEm
+      ? new Date(r.geradoEm).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit' })
+      : '—';
+
+    // Prazo de edição — editável na própria linha (data completa 'YYYY-MM-DD')
+    const venceu = r.status === 'publicado' && !DB.Plano.podeEditar(r.ano);
+    const prazoCell = `
+      <div class="prazo-cell">
+        <input type="date" value="${r.prazoEdicao || ''}" onchange="setPrazoAno(${r.ano}, this.value)"
+               title="Prazo de edição pelos municípios">
+        ${venceu ? '<span class="prazo-venceu">encerrado</span>' : ''}
+      </div>`;
+
+    // Ações conforme status
+    const acaoStatus = r.status === 'publicado'
+      ? `<button class="btn btn--danger btn--sm" onclick="despublicarAno(${r.ano})" title="Tornar invisível aos municípios">🔒 Despublicar</button>`
+      : `<button class="btn btn--success btn--sm" onclick="publicarAno(${r.ano})" title="Tornar visível aos municípios">📢 Publicar</button>`;
+
+    const acaoAbrir = ativo
+      ? `<button class="btn btn--secondary btn--sm" disabled title="Já está sendo editado">✏️ Em edição</button>`
+      : `<button class="btn btn--secondary btn--sm" onclick="abrirPlano(${r.ano})" title="Carregar para editar">📂 Abrir</button>`;
+
+    return `
+      <tr class="${ativo ? 'plano-ativo' : ''}">
+        <td class="plano-ano-cell">${r.ano}${ativo ? '<span class="tag-edit">editando</span>' : ''}</td>
+        <td>${statusBadge}</td>
+        <td>${taxa}<br><span style="font-size:11px;color:var(--slate-500);">${amostras}</span></td>
+        <td>${gerado}</td>
+        <td>${prazoCell}</td>
+        <td>
+          <div class="plano-acoes">
+            ${acaoAbrir}
+            ${acaoStatus}
+            <button class="btn btn--ghost btn--sm" style="color:var(--red-500);" onclick="excluirPlano(${r.ano})" title="Excluir definitivamente">🗑️</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table class="planos-tabela">
+      <thead>
+        <tr>
+          <th>Ano</th><th>Status</th><th>Metas</th><th>Gerado</th><th>Prazo de edição</th><th style="text-align:right;">Ações</th>
+        </tr>
+      </thead>
+      <tbody>${linhas}</tbody>
+    </table>`;
+}
+
+// Banner contextual dentro da seção Ano
+function atualizarAnoContexto() {
+  const el = document.getElementById('anoContexto');
+  if (!el) return;
+  const ano   = parseInt(document.getElementById('cfgAno').value) || null;
+  const plano = ano ? DB.Plano.carregar(ano) : null;
+
+  if (!plano) {
+    el.innerHTML = `📝 Você está configurando o ano <strong>${ano || '—'}</strong>. Ainda não existe plano gerado para ele — ajuste os parâmetros e clique em <strong>Gerar Plano</strong>.`;
+    el.style.background = 'var(--blue-50)'; el.style.borderColor = 'var(--blue-200)';
+  } else if (plano.status === 'publicado') {
+    el.innerHTML = `🟢 O plano de <strong>${ano}</strong> está <strong>publicado</strong> — os municípios já o veem. Gerar novamente substitui o conteúdo (a publicação é mantida). Para tirar do ar, use <strong>Despublicar</strong> na tabela abaixo.`;
+    el.style.background = 'var(--green-50)'; el.style.borderColor = 'var(--green-200)';
+  } else {
+    el.innerHTML = `🟡 O plano de <strong>${ano}</strong> é um <strong>rascunho</strong> — só você o vê. Quando estiver pronto, publique-o na tabela abaixo para liberar aos municípios.`;
+    el.style.background = 'var(--amber-50)'; el.style.borderColor = 'var(--amber-200)';
+  }
+}
+
+/* ── Campo de ano (barra de contexto) ───────── */
+function sincronizarAnoInput() {
+  const inp = document.getElementById('anoInput');
+  if (inp) inp.value = parseInt(document.getElementById('cfgAno').value) || new Date().getFullYear();
+}
+
+/**
+ * Vai para um ano (mesmo campo serve para abrir existente ou começar novo).
+ * Valida 1900–9999; carrega o plano se existir, senão prepara configuração nova.
+ */
+function irParaAno(v) {
+  const ano = parseInt(v);
+  if (!ano || ano < 1900 || ano > 9999) {
+    alert('Informe um ano válido (1900–9999).');
+    sincronizarAnoInput();
+    return;
+  }
+  const atual = parseInt(document.getElementById('cfgAno').value) || null;
+  if (ano === atual) { sincronizarAnoInput(); return; }   // mesmo ano: nada a fazer
+
+  const existia = !!DB.Plano.carregar(ano);
+  selecionarAno(ano);
+  if (!existia) {
+    document.getElementById('secRegras').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    mostrarToast(`📝 Ano ${ano} — configure e clique em Gerar Plano.`);
+  } else {
+    mostrarToast(`📂 Plano de ${ano} carregado.`);
+  }
+}
+
+/**
+ * Troca o ano em planejamento. Carrega o plano daquele ano se existir,
+ * ou prepara uma configuração nova. Recarrega semanas e feriados.
+ */
+function selecionarAno(ano, opts = {}) {
+  ano = parseInt(ano);
+  if (!ano) return;
+  document.getElementById('cfgAno').value = ano;
+  onAnoChange(ano);                       // recarrega semanas/feriados do ano
+  const plano = DB.Plano.carregar(ano);
+  if (plano && plano.ok) {
+    planoAtual = plano;
+    if (plano.cfg) { DB.Config.salvar(plano.cfg); carregarConfigUI(); renderResumos(); }
+    mostrarResultado();
+    if (opts.scroll) document.getElementById('secaoResultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    planoAtual = null;
+    document.getElementById('secaoResultado').classList.remove('visivel');
+  }
+  sincronizarAnoInput();
+  renderPainelPlanos();
+  atualizarAnoContexto();
+  renderStatusPlano();
+}
+
+// Abrir um plano existente a partir da tabela (com aviso de carregamento)
+function abrirPlano(ano) {
+  selecionarAno(ano, { scroll: true });
+  mostrarToast(`📂 Plano de ${ano} carregado.`);
+}
+
+function publicarAno(ano) {
+  if (!DB.Plano.carregar(ano)) return;
+  if (!confirm(`Publicar o plano de ${ano}? Os municípios passarão a ver este cronograma.`)) return;
+  DB.Plano.publicarAno(ano);
+  if (planoAtual && planoAtual.cfg?.ano === ano) { planoAtual.status = 'publicado'; mostrarResultado(); }
+  sincronizarAnoInput();
+  renderPainelPlanos();
+  atualizarAnoContexto();
+  renderStatusPlano();
+  mostrarToast(`📢 Plano de ${ano} publicado!`);
+}
+
+function despublicarAno(ano) {
+  if (!confirm(`Despublicar o plano de ${ano}? Os municípios deixarão de ver este cronograma (o plano continua salvo como rascunho).`)) return;
+  DB.Plano.despublicar(ano);
+  if (planoAtual && planoAtual.cfg?.ano === ano) { planoAtual.status = 'rascunho'; mostrarResultado(); }
+  sincronizarAnoInput();
+  renderPainelPlanos();
+  atualizarAnoContexto();
+  renderStatusPlano();
+  mostrarToast(`🔒 Plano de ${ano} despublicado.`);
+}
+
+function excluirPlano(ano) {
+  const plano = DB.Plano.carregar(ano);
+  const aviso = plano?.status === 'publicado'
+    ? `O plano de ${ano} está PUBLICADO. Excluí-lo o remove dos municípios e apaga tudo permanentemente. Continuar?`
+    : `Excluir definitivamente o rascunho de ${ano}? Esta ação não pode ser desfeita.`;
+  if (!confirm(aviso)) return;
+  DB.Plano.excluir(ano);
+  if (planoAtual && planoAtual.cfg?.ano === ano) {
+    planoAtual = null;
+    document.getElementById('secaoResultado').classList.remove('visivel');
+  }
+  sincronizarAnoInput();
+  renderPainelPlanos();
+  atualizarAnoContexto();
+  renderStatusPlano();
+  mostrarToast(`🗑️ Plano de ${ano} excluído.`);
+}
+
+// Editar o prazo de edição de um plano direto na tabela
+function setPrazoAno(ano, dataFull) {
+  DB.Plano.setPrazo(ano, dataFull || null);
+  renderPainelPlanos();
+  if (planoAtual && planoAtual.cfg?.ano === parseInt(ano)) renderStatusPlano();
+  mostrarToast(dataFull ? `🗓️ Prazo de ${ano} atualizado.` : `🗓️ Prazo de ${ano} removido.`);
+}
+
+/* ════════════════════════════════════════════
+   CONFIG
+   ════════════════════════════════════════════ */
+function carregarConfigUI() {
+  const cfg = DB.Config.carregar();
+  document.getElementById('cfgAno').value = cfg.ano || 2026;
+
+  // Capacidade do laboratório / semana (fixo ou intervalo)
+  setModoCapacidade(cfg.modoCapacidade || 'exato', true);
+  document.getElementById('cfgCapacidadeExata').value = cfg.capacidadeExata ?? '';
+  document.getElementById('cfgCapacidadeMin').value   = cfg.capacidadeMin ?? '';
+  document.getElementById('cfgCapacidadeMax').value   = cfg.capacidadeMax ?? '';
+
+  // Alerta de frascos / semana (fixo ou intervalo)
+  setModoAlerta(cfg.modoAlerta || 'exato', true);
+  document.getElementById('cfgAlertaExata').value = cfg.alertaExata ?? '';
+  document.getElementById('cfgAlertaMin').value   = cfg.alertaMin ?? '';
+  document.getElementById('cfgAlertaMax').value   = cfg.alertaMax ?? '';
+
+  setModoEntrega(cfg.modoEntrega || 'intervalo', true);
+  document.getElementById('cfgEntregaExata').value = cfg.entregaExata || '';
+  document.getElementById('cfgEntregaMin').value   = cfg.entregaMin   || '';
+  document.getElementById('cfgEntregaMax').value   = cfg.entregaMax   || '';
+
+  setModoMuns(cfg.modoMunicipios || 'exato', true);
+  document.getElementById('cfgMunicipiosExato').value = cfg.municipiosExato || 10;
+  document.getElementById('cfgMunicipiosMin').value   = cfg.municipiosMin   || '';
+  document.getElementById('cfgMunicipiosMax').value   = cfg.municipiosMax   || '';
+  renderResumos();
+}
+
+function lerConfig() {
+  const modoE = document.getElementById('btnEntregaExato').classList.contains('ativo') ? 'exato' : 'intervalo';
+  const modoM = document.getElementById('btnMunsExato').classList.contains('ativo') ? 'exato' : 'intervalo';
+  const modoC = document.getElementById('btnCapExato').classList.contains('ativo') ? 'exato' : 'intervalo';
+  const modoA = document.getElementById('btnAlertaExato').classList.contains('ativo') ? 'exato' : 'intervalo';
+
+  // Capacidade: teto efetivo (exato → fixo; intervalo → máx) e piso alvo (intervalo → mín)
+  const capExata = parseNum('cfgCapacidadeExata');
+  const capMin   = parseNum('cfgCapacidadeMin');
+  const capMax   = parseNum('cfgCapacidadeMax');
+  const capacidade     = modoC === 'exato' ? capExata : capMax;
+  const capacidadePiso = modoC === 'intervalo' ? capMin : null;
+
+  // Alerta: "poucos" (exato → fixo; intervalo → mín) e "muitos" (intervalo → máx)
+  const alExata = parseNum('cfgAlertaExata');
+  const alMin   = parseNum('cfgAlertaMin');
+  const alMax   = parseNum('cfgAlertaMax');
+  const alvoMin = modoA === 'exato' ? alExata : alMin;
+  const alvoMax = modoA === 'intervalo' ? alMax : null;
+
+  return {
+    ano:             parseInt(document.getElementById('cfgAno').value) || 2026,
+
+    modoCapacidade:  modoC,
+    capacidadeExata: capExata,
+    capacidadeMin:   capMin,
+    capacidadeMax:   capMax,
+    capacidade,            // teto efetivo (usado pelo algoritmo)
+    capacidadePiso,        // piso alvo do intervalo (usado pelo algoritmo)
+
+    modoAlerta:  modoA,
+    alertaExata: alExata,
+    alertaMin:   alMin,
+    alertaMax:   alMax,
+    alvoMin,               // "poucos frascos"
+    alvoMax,               // "muitos frascos"
+
+    modoEntrega:     modoE,
+    entregaExata:    parseNum('cfgEntregaExata'),
+    entregaMin:      parseNum('cfgEntregaMin'),
+    entregaMax:      parseNum('cfgEntregaMax'),
+    modoMunicipios:  modoM,
+    municipiosExato: parseNum('cfgMunicipiosExato') || 10,
+    municipiosMin:   parseNum('cfgMunicipiosMin'),
+    municipiosMax:   parseNum('cfgMunicipiosMax'),
+    multiplicadorTeto: null,
+    pisoMensal:      null,
+  };
+}
+
+function parseNum(id) {
+  const v = parseFloat(document.getElementById(id)?.value);
+  return isNaN(v) ? null : v;
+}
+
+function salvarConfig() {
+  DB.Config.salvar(lerConfig());
+  renderResumos();
+  mostrarToast('✅ Configurações salvas!');
+}
+
+function setModoEntrega(modo, silencioso = false) {
+  document.getElementById('btnEntregaExato').classList.toggle('ativo',    modo === 'exato');
+  document.getElementById('btnEntregaIntervalo').classList.toggle('ativo', modo === 'intervalo');
+  document.getElementById('camposEntregaExato').style.display    = modo === 'exato'    ? 'flex' : 'none';
+  document.getElementById('camposEntregaIntervalo').style.display = modo === 'intervalo'? 'flex' : 'none';
+  if (!silencioso) renderResumos();
+}
+
+function setModoMuns(modo, silencioso = false) {
+  document.getElementById('btnMunsExato').classList.toggle('ativo',    modo === 'exato');
+  document.getElementById('btnMunsIntervalo').classList.toggle('ativo', modo === 'intervalo');
+  document.getElementById('camposMunsExato').style.display    = modo === 'exato'    ? 'flex' : 'none';
+  document.getElementById('camposMunsIntervalo').style.display = modo === 'intervalo'? 'flex' : 'none';
+  if (!silencioso) renderResumos();
+}
+
+function setModoCapacidade(modo, silencioso = false) {
+  document.getElementById('btnCapExato').classList.toggle('ativo',     modo === 'exato');
+  document.getElementById('btnCapIntervalo').classList.toggle('ativo', modo === 'intervalo');
+  document.getElementById('camposCapExato').style.display     = modo === 'exato'    ? 'flex' : 'none';
+  document.getElementById('camposCapIntervalo').style.display = modo === 'intervalo'? 'flex' : 'none';
+  if (!silencioso) renderResumos();
+}
+
+function setModoAlerta(modo, silencioso = false) {
+  document.getElementById('btnAlertaExato').classList.toggle('ativo',     modo === 'exato');
+  document.getElementById('btnAlertaIntervalo').classList.toggle('ativo', modo === 'intervalo');
+  document.getElementById('camposAlertaExato').style.display     = modo === 'exato'    ? 'flex' : 'none';
+  document.getElementById('camposAlertaIntervalo').style.display = modo === 'intervalo'? 'flex' : 'none';
+  if (!silencioso) renderResumos();
+}
+
+/* ════════════════════════════════════════════
+   SEMANAS
+   ════════════════════════════════════════════ */
+function calcularSemanasDefault(ano) {
+  const t      = Utils.tercasFeirasDoAno(ano);
+  const ferNac = Utils.feriadosNacionaisAno(ano, feriados.nacionais || []);
+  const a      = t.map(() => true);
+  Utils.semanasDeFerias(t).forEach(i => { a[i] = false; });
+  Utils.semanasComFeriadoNacQua(t, ferNac).forEach(i => { a[i] = false; });
+  return a;
+}
+
+function inicializarSemanas(forcar = false) {
+  const ano  = parseInt(document.getElementById('cfgAno').value) || 2026;
+  tercas = Utils.tercasFeirasDoAno(ano);
+  const salvas = DB.Semanas.carregar(ano);
+  semanasAtivas = (salvas && salvas.length === tercas.length && !forcar)
+    ? salvas
+    : calcularSemanasDefault(ano);
+  DB.Semanas.salvar(ano, semanasAtivas);
+}
+
+function renderSemanasGrid() {
+  inicializarSemanas();
+  const ativas   = semanasAtivas.filter(Boolean).length;
+  const inativas = semanasAtivas.length - ativas;
+  const ano      = parseInt(document.getElementById('cfgAno').value) || 2026;
+
+  document.getElementById('semanasResumo').innerHTML = `
+    <div class="stat-card stat-card--success">
+      <div class="stat-card__label">Ativas</div>
+      <div class="stat-card__value">${ativas}</div>
+    </div>
+    <div class="stat-card stat-card--danger">
+      <div class="stat-card__label">Inativas</div>
+      <div class="stat-card__value">${inativas}</div>
+    </div>
+    <div class="stat-card stat-card--info">
+      <div class="stat-card__label">Total ${ano}</div>
+      <div class="stat-card__value">${tercas.length}</div>
+    </div>
+  `;
+
+  const grid = document.getElementById('semanasGrid');
+  grid.innerHTML = '';
+  tercas.forEach((t, i) => {
+    const div = document.createElement('div');
+    div.className = 'week-card ' + (semanasAtivas[i] ? 'active' : 'inactive');
+    div.onclick = () => {
+      semanasAtivas[i] = !semanasAtivas[i];
+      DB.Semanas.salvar(ano, semanasAtivas);
+      renderSemanasGrid();
+      renderResumos();
+    };
+    div.innerHTML = `
+      <div class="week-card__status">${semanasAtivas[i] ? '✅' : '❌'}</div>
+      <div class="week-card__num">Sem. ${i + 1}</div>
+      <div class="week-card__date">${Utils.fmtData(t, { day:'2-digit', month:'short' })}</div>
+    `;
+    grid.appendChild(div);
+  });
+
+  renderResumos();
+}
+
+function ativarTodas() {
+  const ano = parseInt(document.getElementById('cfgAno').value) || 2026;
+  semanasAtivas = tercas.map(() => true);
+  DB.Semanas.salvar(ano, semanasAtivas);
+  renderSemanasGrid();
+  mostrarToast('✅ Todas as semanas ativadas.');
+}
+
+function reaplicarFerias() {
+  inicializarSemanas(true);
+  renderSemanasGrid();
+  mostrarToast('🔄 Recesso reaplicado.');
+}
+
+function ativarSoFeriadosNac() {
+  const ano    = parseInt(document.getElementById('cfgAno').value) || 2026;
+  const ferNac = Utils.feriadosNacionaisAno(ano, feriados.nacionais || []);
+  semanasAtivas = tercas.map(() => true);
+  Utils.semanasComFeriadoNacQua(tercas, ferNac).forEach(i => { semanasAtivas[i] = false; });
+  DB.Semanas.salvar(ano, semanasAtivas);
+  renderSemanasGrid();
+  mostrarToast('🎉 Apenas feriados nacionais bloqueados.');
+}
+
+/* ════════════════════════════════════════════
+   FERIADOS
+   ════════════════════════════════════════════ */
+function toggleFerMun() {
+  document.getElementById('ferMunGroup').style.display =
+    document.getElementById('ferTipo').value === 'municipal' ? 'block' : 'none';
+}
+function toggleEditFerMun() {
+  document.getElementById('editFerMunGroup').style.display =
+    document.getElementById('editFerTipo').value === 'municipal' ? 'block' : 'none';
+}
+
+function popularSelectMunicipios(id) {
+  const sel = document.getElementById(id);
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Selecione...</option>';
+  municipios.forEach(m => {
+    const o = document.createElement('option');
+    o.value = m.nome; o.textContent = m.nome;
+    sel.appendChild(o);
+  });
+}
+
+function renderFeriados() {
+  popularSelectMunicipios('ferMunicipio');
+  popularSelectMunicipios('editFerMunicipio');
+
+  const list = document.getElementById('feriadosList');
+  list.innerHTML = '';
+  const ano = parseInt(document.getElementById('cfgAno').value) || 2026;
+
+  const NOMES_NAC = [
+    'Ano Novo','Carnaval','Sexta-feira Santa','Páscoa','Tiradentes',
+    'Dia do Trabalho','Corpus Christi','Independência',
+    'N. Sra. Aparecida','Finados','Proclamação da República',
+    'Consciência Negra','Natal'
+  ];
+  const ferNacAuto = Utils.feriadosNacionaisAno(ano, []);
+
+  function secLabel(txt) {
+    const el = document.createElement('div');
+    el.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--slate-400);margin:12px 0 6px;';
+    el.textContent = txt;
+    list.appendChild(el);
+  }
+
+  secLabel('📌 Nacionais automáticos — calculados para ' + ano);
+  ferNacAuto.forEach((d, i) => {
+    const div = document.createElement('div');
+    div.className = 'feriado-item feriado-item--auto';
+    const dia = String(d.getDate()).padStart(2,'0');
+    const mes = String(d.getMonth()+1).padStart(2,'0');
+    div.innerHTML = `
+      <span>${NOMES_NAC[i] || ''} — ${dia}/${mes}</span>
+      <span class="badge badge--neutral" style="font-size:11px;">Automático</span>
+    `;
+    list.appendChild(div);
+  });
+
+  const fmt = f => `${String(f.dia).padStart(2,'0')}/${String(f.mes).padStart(2,'0')}`;
+  const temExtras = feriados.nacionais.length || feriados.estaduais.length ||
+    Object.values(feriados.municipais || {}).some(v => v.length);
+
+  if (temExtras) {
+    secLabel('➕ Feriados extras cadastrados');
+    feriados.nacionais.forEach((f, i) => addFerItem(list, fmt(f), 'nacional', 'nacional', i));
+    feriados.estaduais.forEach((f, i) => addFerItem(list, fmt(f), 'estadual', 'estadual', i));
+    Object.entries(feriados.municipais || {}).forEach(([mun, lista]) =>
+      lista.forEach((f, i) => addFerItem(list, `${mun} — ${fmt(f)}`, 'municipal', mun, i))
+    );
+  } else {
+    const el = document.createElement('div');
+    el.style.cssText = 'color:var(--slate-400);font-size:13px;padding:8px 0;';
+    el.textContent = 'Nenhum feriado extra cadastrado.';
+    list.appendChild(el);
+  }
+
+  renderResumos();
+}
+
+function addFerItem(list, label, tipo, chave, idx) {
+  const corMap = { nacional:'danger', estadual:'warning', municipal:'info' };
+  const div = document.createElement('div');
+  div.className = `feriado-item feriado-item--${tipo}`;
+  div.innerHTML = `
+    <div>
+      <span class="badge badge--${corMap[tipo]}" style="font-size:11px;">${tipo.charAt(0).toUpperCase()+tipo.slice(1)}</span>
+      <span style="margin-left:8px;">${label}</span>
+    </div>
+    <div style="display:flex;gap:4px;">
+      <button class="btn btn--ghost btn--sm" onclick="editarFeriado('${tipo}','${chave}',${idx})">✏️</button>
+      <button class="btn btn--ghost btn--sm" style="color:var(--red-500);" onclick="removerFeriado('${tipo}','${chave}',${idx})">🗑️</button>
+    </div>
+  `;
+  list.appendChild(div);
+}
+
+function parseFerData(str) {
+  const m = str.trim().match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (!m) return null;
+  const dia = parseInt(m[1]), mes = parseInt(m[2]);
+  if (dia < 1 || dia > 31 || mes < 1 || mes > 12) return null;
+  return { dia, mes };
+}
+
+function adicionarFeriado() {
+  const f    = parseFerData(document.getElementById('ferData').value);
+  const tipo = document.getElementById('ferTipo').value;
+  const mun  = document.getElementById('ferMunicipio').value;
+  if (!f)                           { alert('Data inválida! Use dd/mm'); return; }
+  if (tipo === 'municipal' && !mun) { alert('Selecione o município!');   return; }
+  if (tipo === 'nacional') feriados.nacionais.push(f);
+  else if (tipo === 'estadual') feriados.estaduais.push(f);
+  else { if (!feriados.municipais[mun]) feriados.municipais[mun] = []; feriados.municipais[mun].push(f); }
+  DB.Feriados.salvar(feriados);
+  document.getElementById('ferData').value = '';
+  renderFeriados();
+  mostrarToast('✅ Feriado adicionado.');
+}
+
+function editarFeriado(tipo, chave, idx) {
+  ferEditRef = { tipo, chave, idx };
+  let f;
+  if (tipo === 'municipal') f = feriados.municipais[chave]?.[idx];
+  else f = feriados[tipo === 'nacional' ? 'nacionais' : 'estaduais']?.[idx];
+  if (!f) return;
+  document.getElementById('editFerData').value = `${String(f.dia).padStart(2,'0')}/${String(f.mes).padStart(2,'0')}`;
+  document.getElementById('editFerTipo').value  = tipo;
+  if (tipo === 'municipal') {
+    popularSelectMunicipios('editFerMunicipio');
+    document.getElementById('editFerMunicipio').value = chave;
+    document.getElementById('editFerMunGroup').style.display = 'block';
+  } else { document.getElementById('editFerMunGroup').style.display = 'none'; }
+  document.getElementById('modalFeriado').classList.add('open');
+}
+
+function salvarEdicaoFeriado() {
+  if (!ferEditRef) return;
+  const f   = parseFerData(document.getElementById('editFerData').value);
+  const tipo = document.getElementById('editFerTipo').value;
+  const mun  = document.getElementById('editFerMunicipio').value;
+  if (!f) { alert('Data inválida!'); return; }
+  if (tipo === 'municipal' && !mun) { alert('Selecione o município!'); return; }
+  removerFeriadoDireto(ferEditRef.tipo, ferEditRef.chave, ferEditRef.idx);
+  if (tipo === 'nacional') feriados.nacionais.push(f);
+  else if (tipo === 'estadual') feriados.estaduais.push(f);
+  else { if (!feriados.municipais[mun]) feriados.municipais[mun] = []; feriados.municipais[mun].push(f); }
+  DB.Feriados.salvar(feriados);
+  fecharModalFeriado();
+  renderFeriados();
+  mostrarToast('✅ Feriado atualizado.');
+}
+
+function removerFeriadoDireto(tipo, chave, idx) {
+  if (tipo === 'municipal') feriados.municipais[chave]?.splice(idx, 1);
+  else (tipo === 'nacional' ? feriados.nacionais : feriados.estaduais).splice(idx, 1);
+}
+
+function removerFeriado(tipo, chave, idx) {
+  if (!confirm('Remover este feriado?')) return;
+  removerFeriadoDireto(tipo, chave, idx);
+  DB.Feriados.salvar(feriados);
+  renderFeriados();
+  mostrarToast('🗑️ Feriado removido.');
+}
+
+function resetarFeriados() {
+  if (!confirm('Restaurar feriados municipais padrão?')) return;
+  DB.Feriados.resetar();
+  feriados = DB.Feriados.carregar();
+  renderFeriados();
+  mostrarToast('🔄 Feriados restaurados.');
+}
+
+function fecharModalFeriado() {
+  document.getElementById('modalFeriado').classList.remove('open');
+  ferEditRef = null;
+}
+
+/* ════════════════════════════════════════════
+   MUNICÍPIOS / METAS
+   ════════════════════════════════════════════ */
+function renderMunicipios() {
+  const totalA = municipios.reduce((s, m) => s + m.meta, 0);
+  document.getElementById('metaStats').innerHTML = `
+    <div class="stat-card stat-card--info">
+      <div class="stat-card__label">Municípios</div>
+      <div class="stat-card__value">${municipios.length}</div>
+    </div>
+    <div class="stat-card stat-card--info">
+      <div class="stat-card__label">Total Tipo A</div>
+      <div class="stat-card__value">${totalA.toLocaleString('pt-BR')}</div>
+      <div class="stat-card__sub">amostras/ano</div>
+    </div>
+    <div class="stat-card stat-card--accent">
+      <div class="stat-card__label">Total Geral A+B</div>
+      <div class="stat-card__value">${(totalA*2).toLocaleString('pt-BR')}</div>
+      <div class="stat-card__sub">amostras/ano</div>
+    </div>
+    <div class="stat-card stat-card--success">
+      <div class="stat-card__label">Com regras próprias</div>
+      <div class="stat-card__value">${municipios.filter(m => temRegraPersonalizada(m.regras)).length}</div>
+    </div>
+  `;
+
+  const cfg  = lerConfig();
+  const list = document.getElementById('municipiosList');
+  list.innerHTML = '';
+  municipios.forEach((m, i) => {
+    const div = document.createElement('div');
+    div.className = 'mun-row';
+    div.onclick   = () => abrirModalRegras(i);
+    const badges  = gerarBadgesMunicipio(m, cfg);
+    div.innerHTML = `
+      <div>
+        <div class="mun-row__nome">${m.nome}</div>
+        <div class="mun-row__sub">Meta: ${m.meta} tipo A &nbsp;·&nbsp; ${m.meta*2} total</div>
+      </div>
+      <div class="mun-row__right">
+        <input type="number" value="${m.meta}" min="1" max="999" style="width:80px;text-align:right;font-weight:700;"
+          onclick="event.stopPropagation()"
+          onchange="event.stopPropagation(); municipios[${i}].meta = Math.max(1, parseInt(this.value)||0); renderMunicipios();">
+        <div>${badges}</div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function temRegraPersonalizada(r) {
+  if (!r) return false;
+  // Modo exato só conta como personalizado se tiver valor preenchido
+  const temEntregaCustom =
+    (r.modoEntrega === 'exato'     && r.entregaExata != null) ||
+    (r.modoEntrega === 'intervalo' && (r.entregaMin != null || r.entregaMax != null));
+  const temPeriodo = r.periodicidade != null && r.periodicidade !== 'herdar';
+  return temEntregaCustom || temPeriodo || r.pisoMensal != null || r.multiplicadorTeto != null;
+}
+
+function gerarBadgesMunicipio(m, cfg) {
+  const r = m.regras || {};
+  if (!temRegraPersonalizada(r)) return `<span class="regra-badge regra-badge--herda">Herda global</span>`;
+  const p = [];
+  // Proteção contra null: só exibir badge se o valor for válido
+  if (r.modoEntrega === 'exato' && r.entregaExata != null)
+    p.push(`<span class="regra-badge regra-badge--custom">⚡ ${r.entregaExata}/visita</span>`);
+  if (r.modoEntrega === 'intervalo' && r.entregaMin != null && r.entregaMax != null)
+    p.push(`<span class="regra-badge regra-badge--custom">⚡ ${r.entregaMin}–${r.entregaMax}</span>`);
+  if (r.periodicidade === '1xmes') p.push(`<span class="regra-badge regra-badge--custom">📅 1×/mês</span>`);
+  if (r.periodicidade === '2xmes') p.push(`<span class="regra-badge regra-badge--custom">📅 2×/mês</span>`);
+  if (r.periodicidade === '3xmes') p.push(`<span class="regra-badge regra-badge--custom">📅 3×/mês</span>`);
+  // Se o modo é fixo/intervalo mas não tem valores válidos, tratar como "Herda global"
+  if (!p.length) return `<span class="regra-badge regra-badge--herda">Herda global</span>`;
+  return p.join('');
+}
+
+function salvarMetas() { DB.Municipios.salvar(municipios); mostrarToast('✅ Metas salvas!'); }
+function resetarMetas() {
+  if (!confirm('Restaurar metas e regras padrão?')) return;
+  DB.Municipios.resetar();
+  municipios = DB.Municipios.listar();
+  renderMunicipios();
+  mostrarToast('🔄 Metas restauradas.');
+}
+
+/* ════════════════════════════════════════════
+   MODAL REGRAS POR MUNICÍPIO
+   ════════════════════════════════════════════ */
+function abrirModalRegras(idx) {
+  munEditIdx = idx;
+  const m   = municipios[idx];
+  const r   = { ...DB.Municipios.REGRAS_PADRAO, ...(m.regras || {}) };
+  const cfg = lerConfig();
+  const mesesN = 12;
+  const sugestao = m.meta % mesesN === 0 ? m.meta / mesesN : null;
+  const gDescE = cfg.modoEntrega === 'exato' ? `Fixo: ${cfg.entregaExata}` : `${cfg.entregaMin}–${cfg.entregaMax}`;
+
+  document.getElementById('modalRegrasTitle').textContent = `Regras — ${m.nome}`;
+  document.getElementById('modalRegrasBody').innerHTML = `
+    <div style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.7;">
+      <strong>Meta anual:</strong> ${m.meta} tipo A · ${m.meta*2} total
+      ${sugestao ? `<br><span style="color:var(--green-700);">💡 Para 1×/mês: <strong>${sugestao} frascos/visita</strong> (${m.meta} ÷ 12 = ${sugestao})</span>` : ''}
+    </div>
+
+    <div class="regra-section-title">Frascos por visita</div>
+    <div class="param-row">
+      <label>Modo</label>
+      <div class="param-control">
+        <div class="modo-toggle" id="toggleModoEntregaMun">
+          <button onclick="setModoEntregaMun('herdar')"   id="btnMunHerdar">Herdar global</button>
+          <button onclick="setModoEntregaMun('exato')"    id="btnMunExato">Fixo</button>
+          <button onclick="setModoEntregaMun('intervalo')" id="btnMunIntervalo">Intervalo</button>
+        </div>
+        <span style="color:var(--slate-400);font-size:12px;">Global: ${gDescE}</span>
+      </div>
+    </div>
+    <div id="camposMunExato" class="param-row" style="display:none;">
+      <label>Quantidade fixa</label>
+      <div class="param-control">
+        <input type="number" id="munEntregaExata" min="1" max="50" style="width:80px;" value="${r.entregaExata||''}">
+        <span class="form-hint">frascos/visita</span>
+      </div>
+    </div>
+    <div id="camposMunIntervalo" class="param-row" style="display:none;">
+      <label>Intervalo</label>
+      <div class="param-control">
+        <input type="number" id="munEntregaMin" min="1" max="50" style="width:70px;" placeholder="Mín" value="${r.entregaMin||''}">
+        <span style="color:var(--slate-400);">até</span>
+        <input type="number" id="munEntregaMax" min="1" max="50" style="width:70px;" placeholder="Máx" value="${r.entregaMax||''}">
+      </div>
+    </div>
+
+    <div class="regra-section-title">Periodicidade</div>
+    <div class="param-row">
+      <label>Frequência mensal</label>
+      <div class="param-control">
+        <div class="modo-toggle">
+          <button onclick="setPeriod('herdar')" id="btnPeriodHerdar">Herdar</button>
+          <button onclick="setPeriod('livre')"  id="btnPeriodLivre">Livre</button>
+          <button onclick="setPeriod('1xmes')"  id="btnPeriod1x">1×/mês</button>
+          <button onclick="setPeriod('2xmes')"  id="btnPeriod2x">2×/mês</button>
+          <button onclick="setPeriod('3xmes')"  id="btnPeriod3x">3×/mês</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  setModoEntregaMun(r.modoEntrega || 'herdar', true);
+  setPeriod(r.periodicidade || 'herdar', true);
+  document.getElementById('modalRegras').classList.add('open');
+}
+
+function setModoEntregaMun(modo, s=false) {
+  ['herdar','exato','intervalo'].forEach(m => {
+    const el = document.getElementById(`btnMun${m.charAt(0).toUpperCase()+m.slice(1)}`);
+    if (el) el.classList.toggle('ativo', m === modo);
+  });
+  const ex  = document.getElementById('camposMunExato');
+  const int = document.getElementById('camposMunIntervalo');
+  if (ex)  ex.style.display  = modo === 'exato'    ? 'flex' : 'none';
+  if (int) int.style.display = modo === 'intervalo'? 'flex' : 'none';
+}
+
+function setPeriod(modo, s=false) {
+  const map = {herdar:'btnPeriodHerdar',livre:'btnPeriodLivre','1xmes':'btnPeriod1x','2xmes':'btnPeriod2x','3xmes':'btnPeriod3x'};
+  Object.entries(map).forEach(([m, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('ativo', m === modo);
+  });
+}
+
+function getModoEntregaMun() {
+  if (document.getElementById('btnMunExato')?.classList.contains('ativo'))    return 'exato';
+  if (document.getElementById('btnMunIntervalo')?.classList.contains('ativo')) return 'intervalo';
+  return 'herdar';
+}
+
+function getPeriodicidade() {
+  if (document.getElementById('btnPeriodLivre')?.classList.contains('ativo')) return 'livre';
+  if (document.getElementById('btnPeriod1x')?.classList.contains('ativo'))    return '1xmes';
+  if (document.getElementById('btnPeriod2x')?.classList.contains('ativo'))    return '2xmes';
+  if (document.getElementById('btnPeriod3x')?.classList.contains('ativo'))    return '3xmes';
+  return 'herdar';
+}
+
+function salvarRegrasModal() {
+  if (munEditIdx === null) return;
+  const modo = getModoEntregaMun();
+
+  // Validar campos obrigatórios antes de salvar
+  if (modo === 'exato') {
+    const v = parseFloat(document.getElementById('munEntregaExata')?.value);
+    if (!v || v < 1) {
+      // Campo vazio: reverter para herdar em vez de salvar null
+      const inp = document.getElementById('munEntregaExata');
+      if (inp) { inp.style.borderColor = 'var(--red-500)'; inp.focus(); }
+      mostrarToast('⚠️ Informe a quantidade fixa ou selecione "Herdar global".');
+      return;
+    }
+  }
+  if (modo === 'intervalo') {
+    const mn = parseFloat(document.getElementById('munEntregaMin')?.value);
+    const mx = parseFloat(document.getElementById('munEntregaMax')?.value);
+    if (!mn || !mx) {
+      mostrarToast('⚠️ Preencha o mínimo e o máximo do intervalo.');
+      return;
+    }
+    if (mn > mx) {
+      mostrarToast('⚠️ Mínimo não pode ser maior que o máximo.');
+      return;
+    }
+  }
+
+  municipios[munEditIdx].regras = {
+    modoEntrega:   modo,
+    entregaExata:  modo === 'exato'    ? parseFloat(document.getElementById('munEntregaExata')?.value) || null : null,
+    entregaMin:    modo === 'intervalo'? parseFloat(document.getElementById('munEntregaMin')?.value)  || null : null,
+    entregaMax:    modo === 'intervalo'? parseFloat(document.getElementById('munEntregaMax')?.value)  || null : null,
+    periodicidade: getPeriodicidade(),
+    multiplicadorTeto: null, pisoMensal: null,
+  };
+  fecharModalRegras();
+  DB.Municipios.salvar(municipios);
+  renderMunicipios();
+  mostrarToast('✅ Regras salvas para ' + municipios[munEditIdx].nome);
+}
+
+function resetarRegrasModal() {
+  if (munEditIdx === null) return;
+  municipios[munEditIdx].regras = { ...DB.Municipios.REGRAS_PADRAO };
+  fecharModalRegras();
+  DB.Municipios.salvar(municipios);
+  renderMunicipios();
+  mostrarToast('🔄 Regras resetadas.');
+}
+
+function fecharModalRegras() {
+  document.getElementById('modalRegras').classList.remove('open');
+  munEditIdx = null;
+}
+
+/* ════════════════════════════════════════════
+   GERAR PLANO
+   ════════════════════════════════════════════ */
+function gerarPlano() {
+  const cfg = lerConfig();
+
+  // Se o ano já está publicado, avisar que será atualizado mantendo a publicação.
+  const eraPublicado = DB.Plano.estaPublicado(cfg.ano);
+  if (eraPublicado &&
+      !confirm(`O plano de ${cfg.ano} está PUBLICADO. Gerar novamente substitui o conteúdo e ele continuará publicado — os municípios passarão a ver a versão nova. Continuar?`)) {
+    return;
+  }
+
+  DB.Config.salvar(cfg);
+  inicializarSemanas();
+
+  const validacao = Planner.validar(cfg, municipios, tercas, semanasAtivas, feriados);
+  const boxEl     = document.getElementById('validacaoBox');
+  const secRes    = document.getElementById('secaoResultado');
+
+  if (!validacao.ok) {
+    // Limpar resultado anterior e mostrar apenas os erros
+    document.getElementById('resultadosContent').innerHTML = '';
+    document.getElementById('detalhesContent').innerHTML   = '';
+    document.getElementById('resultadoTitulo').textContent = 'Erros encontrados';
+    document.getElementById('resultadoSub').textContent    = 'Corrija os problemas abaixo antes de gerar o plano';
+    document.getElementById('resultadoAcoes').innerHTML    = '';
+    boxEl.innerHTML = `
+      <div style="background:var(--red-50);border:1.5px solid var(--red-300);border-radius:var(--radius-md);padding:18px 20px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:var(--red-700);margin-bottom:12px;font-size:15px;">
+          🚫 Corrija os erros antes de gerar
+        </div>
+        ${validacao.erros.map(e => `
+          <div style="display:flex;gap:8px;align-items:flex-start;color:var(--red-700);font-size:13.5px;padding:6px 0;border-top:1px solid var(--red-100);">
+            <span style="flex-shrink:0;">❌</span>
+            <span>${e.msg}</span>
+          </div>`).join('')}
+        ${validacao.avisos?.length ? `
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--red-200);">
+            ${validacao.avisos.map(a => `
+              <div style="display:flex;gap:8px;color:var(--amber-700);font-size:13px;padding:4px 0;">
+                <span>💡</span><span>${a.msg}</span>
+              </div>`).join('')}
+          </div>` : ''}
+      </div>
+    `;
+    secRes.classList.add('visivel');
+    secRes.scrollIntoView({ behavior:'smooth' });
+    return;
+  }
+
+  const resultado = Planner.gerar(cfg, municipios, tercas, semanasAtivas, feriados);
+  if (!resultado.ok) { alert(resultado.erro); return; }
+
+  planoAtual = resultado;
+  DB.Plano.salvar(planoAtual);
+  // Mantém a publicação se o ano já estava no ar
+  if (eraPublicado) { DB.Plano.publicarAno(cfg.ano); planoAtual.status = 'publicado'; }
+
+  // Avisos (sem erros)
+  if (validacao.avisos?.length) {
+    boxEl.innerHTML = `
+      <div style="background:var(--amber-50);border:1px solid var(--amber-200);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:16px;">
+        <div style="font-weight:600;color:var(--amber-700);margin-bottom:6px;font-size:13px;">💡 Avisos</div>
+        ${validacao.avisos.map(a => `<div style="color:var(--amber-700);font-size:13px;padding:2px 0;">${a.msg}</div>`).join('')}
+      </div>
+    `;
+  } else {
+    boxEl.innerHTML = '';
+  }
+
+  mostrarResultado();
+  renderPainelPlanos();
+  atualizarAnoContexto();
+  sincronizarAnoInput();
+  renderStatusPlano();
+  secRes.scrollIntoView({ behavior:'smooth' });
+  mostrarToast('✅ Plano gerado com sucesso!');
+}
+
+/* ════════════════════════════════════════════
+   RESULTADO
+   ════════════════════════════════════════════ */
+function mostrarResultado() {
+  if (!planoAtual) return;
+  const p    = planoAtual;
+  const taxa = (p.taxa * 100).toFixed(1);
+  const isP  = DB.Plano.estaPublicado();
+
+  document.getElementById('secaoResultado').classList.add('visivel');
+  document.getElementById('resultadoTitulo').textContent = `Plano ${p.cfg.ano} — ${taxa}% das metas`;
+  document.getElementById('resultadoSub').textContent    =
+    `${p.totalDist.toLocaleString('pt-BR')} amostras tipo A · gerado em ${new Date(p.geradoEm).toLocaleDateString('pt-BR')}`;
+
+  document.getElementById('resultadoAcoes').innerHTML = `
+    <span id="statusPlanoTopo"></span>
+    <button class="btn btn--sm" style="color:#fff;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);" onclick="exportarCSV()">📥 CSV</button>
+    ${!isP
+      ? '<button class="btn btn--success" onclick="publicarPlano()">📢 Publicar para Municípios</button>'
+      : '<button class="btn btn--danger btn--sm" onclick="despublicarPlano()">🔒 Despublicar</button>'
+    }
+  `;
+  renderStatusPlano();
+
+  let pubBanner = '';
+  if (isP) {
+    pubBanner = '<div class="pub-banner" style="margin-bottom:20px;"><div><h3>✅ Plano publicado!</h3><p>Os municípios já podem acessar seus cronogramas.</p></div><span style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;">PUBLICADO</span></div>';
+  }
+
+  const mps    = p.semanasAtivasIdx.map(si => p.munPorSem[si]).filter(v => v > 0);
+  const mpsMin = mps.length ? Math.min(...mps) : 0;
+  const mpsMax = mps.length ? Math.max(...mps) : 0;
+  const mpsMed = mps.length ? (mps.reduce((a,b)=>a+b,0)/mps.length).toFixed(1) : 0;
+  const unifCt = (p.uniformidade||[]).filter(u => u.uniforme).length;
+
+  let alertasHtml = '';
+  const inc = (p.alertas||[]).find(a => a.tipo === 'incompleto');
+  alertasHtml += inc
+    ? `<div class="alert alert--danger"><span class="alert__icon">❌</span><div class="alert__body"><div class="alert__title">Metas não atingidas:</div>${inc.items.map(x=>`<div>${x.nome}: faltam ${x.faltam}</div>`).join('')}</div></div>`
+    : '<div class="alert alert--success"><span class="alert__icon">✅</span><div class="alert__body"><strong>100% das metas cumpridas!</strong></div></div>';
+  (p.alertas||[]).filter(a=>a.tipo==='viagem_baixa').forEach(a=>{
+    alertasHtml += `<div class="alert alert--warning"><span class="alert__icon">⚠️</span><div class="alert__body">${a.quantidade} semana(s) com menos de ${a.alvo} frascos (poucos).</div></div>`;
+  });
+  (p.alertas||[]).filter(a=>a.tipo==='viagem_alta').forEach(a=>{
+    alertasHtml += `<div class="alert alert--warning"><span class="alert__icon">⚠️</span><div class="alert__body">${a.quantidade} semana(s) com mais de ${a.alvo} frascos (muitos).</div></div>`;
+  });
+  (p.alertas||[]).filter(a=>a.tipo==='capacidade_abaixo_piso').forEach(a=>{
+    alertasHtml += `<div class="alert alert--info"><span class="alert__icon">ℹ️</span><div class="alert__body">${a.quantidade} semana(s) abaixo do piso de capacidade (${a.piso} frascos/semana; menor: ${a.menor}). É só um aviso de subutilização — o plano está completo.</div></div>`;
+  });
+  (p.alertas||[]).filter(a=>a.tipo==='capacidade_excedida').forEach(a=>{
+    alertasHtml += `<div class="alert alert--danger"><span class="alert__icon">⚠️</span><div class="alert__body">${a.quantidade} semana(s) acima da capacidade de ${a.capacidade} frascos/semana (maior: ${a.maior}). Considere aumentar a capacidade, ativar mais semanas ou reduzir municípios por viagem.</div></div>`;
+  });
+
+  // Alerta de periodicidade não cumprida
+  const periodViolada = (p.alertas||[]).find(a => a.tipo === 'periodicidade_nao_cumprida');
+  if (periodViolada) {
+    const detalhes = periodViolada.items.map(item => {
+      const mesesStr = item.meses.map(m =>
+        `${m.mes}: ${m.planejado}× planejado, ${m.esperado}× esperado`
+      ).join(' · ');
+      return `<div style="padding:4px 0;border-top:1px solid rgba(180,83,9,.15);margin-top:4px;">
+        <strong>${item.municipio}</strong> — periodicidade <em>${item.period}</em> (${item.ppMes}×/mês)
+        <div style="font-size:12px;margin-top:3px;color:var(--amber-700);">${mesesStr}</div>
+      </div>`;
+    }).join('');
+    alertasHtml += `
+      <div class="alert alert--warning">
+        <span class="alert__icon">📅</span>
+        <div class="alert__body">
+          <div class="alert__title">Periodicidade não cumprida em alguns meses</div>
+          <div style="font-size:12.5px;margin-bottom:6px;color:var(--amber-700);">
+            A periodicidade configurada não pôde ser totalmente respeitada — isso ocorre quando
+            a regra de <strong>mínimo de municípios por viagem (P6)</strong> precisou mover
+            participações entre semanas, quebrando o padrão mensal.
+            Para resolver: reduza o mínimo de municípios/viagem ou flexibilize a periodicidade.
+          </div>
+          ${detalhes}
+        </div>
+      </div>`;
+  }
+
+  document.getElementById('resultadosContent').innerHTML = pubBanner + `
+    <div class="stats-row">
+      <div class="stat-card stat-card--${taxa==='100.0'?'success':'danger'}">
+        <div class="stat-card__label">Cumprimento</div><div class="stat-card__value">${taxa}%</div>
+        <div class="stat-card__sub">${p.totalDist} / ${p.totalEsper}</div>
+      </div>
+      <div class="stat-card stat-card--info">
+        <div class="stat-card__label">Total A+B</div>
+        <div class="stat-card__value">${(p.totalDist*2).toLocaleString('pt-BR')}</div>
+        <div class="stat-card__sub">amostras no ano</div>
+      </div>
+      <div class="stat-card stat-card--info">
+        <div class="stat-card__label">Mun./viagem (média)</div>
+        <div class="stat-card__value">${mpsMed}</div>
+        <div class="stat-card__sub">min ${mpsMin} · máx ${mpsMax}</div>
+      </div>
+      <div class="stat-card stat-card--${unifCt===p.municipios.length?'success':'warning'}">
+        <div class="stat-card__label">Dist. uniforme</div>
+        <div class="stat-card__value">${unifCt}/${p.municipios.length}</div>
+        <div class="stat-card__sub">municípios ✅</div>
+      </div>
+    </div>
+    ${alertasHtml}
+    <div class="card" style="margin-top:20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div class="card__title" style="margin-bottom:0;">📋 Distribuição por Município</div>
+        <span class="filtro-count" id="tabelaCount">${p.municipios.length} municípios</span>
+      </div>
+      <div class="filtro-bar">
+        <div class="filtro-busca">
+          <span class="filtro-busca-icon">🔍</span>
+          <input type="text" id="tabelaBusca" placeholder="Buscar município..." oninput="filtrarTabela()">
+        </div>
+        <div class="filtro-sep"></div>
+        <button class="fpill" id="fpStatus" onclick="toggleFpill(this,'tabelaStatus','ok')">✅ Meta OK</button>
+        <button class="fpill" id="fpPendente" onclick="toggleFpill(this,'tabelaStatus','pendente')">❌ Pendente</button>
+        <div class="filtro-sep"></div>
+        <button class="fpill" id="fpCustom" onclick="toggleFpill(this,'tabelaRegra','custom')">⚡ Custom</button>
+        <div class="filtro-sep"></div>
+        <button class="fpill" id="fpNaoUnif" onclick="toggleFpill(this,'tabelaUnif','nao')">⚠️ Não uniforme</button>
+        <button class="fpill" onclick="limparFiltrosTabela()" style="margin-left:auto;padding:4px 10px;font-size:11.5px;">✕ Limpar</button>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead><tr>
+            <th>Município</th><th>Meta A</th><th>Planejado</th>
+            <th>Participações</th><th>Qtd/visita</th><th>Uniforme</th><th>Regra</th><th>Status</th>
+          </tr></thead>
+          <tbody id="tabelaBody">
+            ${p.municipios.map((m, i) => {
+              const total  = p.dist[i].reduce((s,v)=>s+v,0);
+              const partic = p.dist[i].filter(v=>v>0).length;
+              const u      = p.uniformidade?.[i];
+              const qtdStr = u ? (u.min===u.max?`${u.min}`:`${u.min}–${u.max}`) : '—';
+              const unifOk = u?.uniforme !== false;
+              const ok     = total >= m.meta;
+              const isCust = temRegraPersonalizada(m.regras);
+              return `<tr data-nome="${m.nome.toLowerCase()}" data-ok="${ok}" data-custom="${isCust}" data-unif="${unifOk}">
+                <td><strong>${m.nome}</strong></td>
+                <td>${m.meta}</td><td>${total}</td>
+                <td>${partic}×</td>
+                <td><strong>${qtdStr}</strong></td>
+                <td>${unifOk?'<span class="badge badge--success">✅</span>':'<span class="badge badge--warning">⚠️</span>'}</td>
+                <td>${isCust?'<span class="badge badge--info">Custom</span>':'<span class="badge badge--neutral">Global</span>'}</td>
+                <td><span class="badge badge--${ok?'success':'danger'}">${ok?'✅':'❌'}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  renderDetalhamento(p);
+}
+
+/* filtros tabela */
+const _filtros = { tabelaBusca:'', tabelaStatus:null, tabelaRegra:null, tabelaUnif:null, detMeses:new Set(), detMuns:new Set() };
+
+function toggleFpill(btn, campo, valor) {
+  _filtros[campo] = _filtros[campo]===valor ? null : valor;
+  document.querySelectorAll(`[onclick*="${campo}"]`).forEach(b=>b.classList.remove('ativo'));
+  if(_filtros[campo]) btn.classList.add('ativo');
+  filtrarTabela();
+}
+
+function filtrarTabela() {
+  _filtros.tabelaBusca = (document.getElementById('tabelaBusca')?.value||'').toLowerCase();
+  const rows = document.querySelectorAll('#tabelaBody tr');
+  let vis = 0;
+  rows.forEach(tr => {
+    let show = true;
+    if(_filtros.tabelaBusca && !(tr.dataset.nome||'').includes(_filtros.tabelaBusca)) show=false;
+    if(_filtros.tabelaStatus==='ok'       && tr.dataset.ok!=='true')    show=false;
+    if(_filtros.tabelaStatus==='pendente'  && tr.dataset.ok==='true')    show=false;
+    if(_filtros.tabelaRegra ==='custom'    && tr.dataset.custom!=='true') show=false;
+    if(_filtros.tabelaUnif  ==='nao'       && tr.dataset.unif==='true')   show=false;
+    tr.style.display = show ? '' : 'none';
+    if(show) vis++;
+  });
+  const cnt = document.getElementById('tabelaCount');
+  if(cnt) cnt.textContent = `${vis} de ${rows.length} municípios`;
+}
+
+function limparFiltrosTabela() {
+  _filtros.tabelaBusca=_filtros.tabelaStatus=_filtros.tabelaRegra=_filtros.tabelaUnif=null;
+  const inp=document.getElementById('tabelaBusca'); if(inp) inp.value='';
+  document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('ativo'));
+  filtrarTabela();
+}
+
+/* detalhamento */
+function renderDetalhamento(p) {
+  const tercasD  = p.tercas.map(s=>new Date(s));
+  const mesesDisp = [...new Set(p.semanasAtivasIdx.map(si=>tercasD[si].getMonth()+1))].sort((a,b)=>a-b);
+  document.getElementById('detalhesContent').innerHTML = `
+    <div style="margin-top:24px;">
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--slate-800);margin-bottom:16px;">📋 Detalhamento por Mês</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+        <div class="mun-ms" id="munMsWrap">
+          <button class="mun-ms-trigger" id="munMsTrigger" onclick="toggleMunMs()">
+            <span id="munMsLabel">Todos os municípios</span><span style="color:var(--slate-400);font-size:11px;">▼</span>
+          </button>
+          <div class="mun-ms-dropdown" id="munMsDropdown">
+            <div class="mun-ms-search"><input type="text" placeholder="Buscar..." oninput="filtrarOpsMunMs(this.value)"></div>
+            <div id="munMsOpts">${p.municipios.map((m,i)=>`
+              <label class="mun-ms-opt" id="munOpt${i}">
+                <input type="checkbox" value="${m.nome}" onchange="toggleMunDetalhe('${m.nome}')"> ${m.nome}
+              </label>`).join('')}</div>
+            <div class="mun-ms-foot">
+              <button class="btn btn--secondary btn--sm" onclick="limparMunDetalhe()">Limpar</button>
+              <button class="btn btn--primary btn--sm" onclick="toggleMunMs()">OK</button>
+            </div>
+          </div>
+        </div>
+        <div class="mes-pills" style="margin-bottom:0;gap:5px;" id="mesPills">
+          <button class="mes-pill mes-pill--todos ativo" onclick="toggleMesFiltro(0)" data-mes="0">Todos</button>
+          ${mesesDisp.map(m=>`<button class="mes-pill" onclick="toggleMesFiltro(${m})" data-mes="${m}">${Utils.MESES_PT[m-1].substring(0,3)}</button>`).join('')}
+        </div>
+        <button class="fpill" onclick="limparFiltrosDetalhe()" style="padding:4px 10px;font-size:11.5px;">✕ Limpar</button>
+      </div>
+      <div id="detalheMeses">
+        ${mesesDisp.map(mes => {
+          const semMes = p.semanasAtivasIdx.filter(si=>tercasD[si].getMonth()+1===mes);
+          const totMes = semMes.reduce((s,si)=>s+p.totSem[si],0);
+          return `<div class="mes-bloco" data-mes="${mes}">
+            <div class="mes-header">
+              <span>${Utils.MESES_PT[mes-1]} ${p.cfg.ano}</span>
+              <span>${totMes.toLocaleString('pt-BR')} amostras · ${semMes.length} viagens</span>
+            </div>
+            ${semMes.map(si => {
+              const muns = p.municipios.map((m,i)=>({nome:m.nome,qtd:p.dist[i][si]})).filter(x=>x.qtd>0).sort((a,b)=>b.qtd-a.qtd);
+              return `<div class="semana-card" data-sem="${si}">
+                <div class="semana-card__header">
+                  <div><strong>Semana ${si+1}</strong> · ${Utils.fmtData(tercasD[si],{weekday:'short',day:'2-digit',month:'2-digit'})}</div>
+                  <div style="display:flex;gap:6px;">
+                    <span class="badge badge--info">${p.totSem[si]} A + ${p.totSem[si]} B</span>
+                    <span class="badge badge--neutral">${muns.length} municípios</span>
+                  </div>
+                </div>
+                <div>${muns.map(m=>`<span class="mun-tag" data-mun="${m.nome}">${m.nome} <strong>${m.qtd}</strong></span>`).join('')}</div>
+              </div>`;
+            }).join('')}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  document.addEventListener('click', fecharMunMsFora);
+}
+
+function toggleMunMs() {
+  const d=document.getElementById('munMsDropdown'), t=document.getElementById('munMsTrigger');
+  if(!d||!t) return;
+  d.classList.toggle('open'); t.classList.toggle('open');
+}
+function fecharMunMsFora(e) {
+  const w=document.getElementById('munMsWrap');
+  if(w&&!w.contains(e.target)) {
+    document.getElementById('munMsDropdown')?.classList.remove('open');
+    document.getElementById('munMsTrigger')?.classList.remove('open');
+  }
+}
+function filtrarOpsMunMs(t) {
+  document.querySelectorAll('.mun-ms-opt').forEach(o=>{o.style.display=o.textContent.toLowerCase().includes(t.toLowerCase())?'':' none';});
+}
+function toggleMunDetalhe(nome) {
+  if(_filtros.detMuns.has(nome)) _filtros.detMuns.delete(nome); else _filtros.detMuns.add(nome);
+  atualizarLabelMunMs(); aplicarFiltrosDetalhe();
+}
+function limparMunDetalhe() {
+  _filtros.detMuns.clear();
+  document.querySelectorAll('.mun-ms-opt input').forEach(cb=>{cb.checked=false;});
+  document.querySelectorAll('.mun-ms-opt').forEach(o=>o.classList.remove('sel'));
+  atualizarLabelMunMs(); aplicarFiltrosDetalhe();
+}
+function atualizarLabelMunMs() {
+  const l=document.getElementById('munMsLabel'); if(!l) return;
+  const n=_filtros.detMuns.size;
+  l.textContent = n===0?'Todos os municípios':n===1?[..._filtros.detMuns][0]:`${n} municípios selecionados`;
+  document.querySelectorAll('.mun-ms-opt').forEach(o=>{
+    const cb=o.querySelector('input'), nm=cb?.value;
+    if(cb) cb.checked=_filtros.detMuns.has(nm);
+    o.classList.toggle('sel',_filtros.detMuns.has(nm));
+  });
+}
+function toggleMesFiltro(mes) {
+  if(mes===0) {
+    _filtros.detMeses.clear();
+    document.querySelectorAll('#mesPills .mes-pill').forEach(p=>p.classList.remove('ativo'));
+    document.querySelector('#mesPills .mes-pill--todos')?.classList.add('ativo');
+  } else {
+    document.querySelector('#mesPills .mes-pill--todos')?.classList.remove('ativo');
+    const btn=document.querySelector(`#mesPills [data-mes="${mes}"]`);
+    if(_filtros.detMeses.has(mes)) { _filtros.detMeses.delete(mes); btn?.classList.remove('ativo'); }
+    else { _filtros.detMeses.add(mes); btn?.classList.add('ativo'); }
+    if(_filtros.detMeses.size===0) document.querySelector('#mesPills .mes-pill--todos')?.classList.add('ativo');
+  }
+  aplicarFiltrosDetalhe();
+}
+function limparFiltrosDetalhe() {
+  _filtros.detMeses.clear(); _filtros.detMuns.clear();
+  document.querySelectorAll('#mesPills .mes-pill').forEach(p=>p.classList.remove('ativo'));
+  document.querySelector('#mesPills .mes-pill--todos')?.classList.add('ativo');
+  limparMunDetalhe();
+}
+function aplicarFiltrosDetalhe() {
+  const temMes=_filtros.detMeses.size>0, temMun=_filtros.detMuns.size>0;
+  document.querySelectorAll('#detalheMeses .mes-bloco').forEach(bloco=>{
+    const mes=parseInt(bloco.dataset.mes);
+    if(temMes && !_filtros.detMeses.has(mes)) { bloco.style.display='none'; return; }
+    bloco.style.display='';
+    bloco.querySelectorAll('.semana-card').forEach(card=>{
+      if(!temMun) {
+        card.classList.remove('s-dim');
+        card.querySelectorAll('.mun-tag').forEach(t=>{t.classList.remove('t-hl','t-dim');});
+        return;
+      }
+      const tags=card.querySelectorAll('.mun-tag');
+      const temAlgum=[...tags].some(t=>_filtros.detMuns.has(t.dataset.mun));
+      card.classList.toggle('s-dim',!temAlgum);
+      tags.forEach(t=>{
+        const sel=_filtros.detMuns.has(t.dataset.mun);
+        t.classList.toggle('t-hl', temAlgum && sel);
+        t.classList.toggle('t-dim', temAlgum && !sel);
+      });
+    });
+  });
+}
+
+
+function renderStatusPlano() {
+  const el = document.getElementById('statusPlanoTopo');
+  const ano = planoAtual?.cfg?.ano || parseInt(document.getElementById('cfgAno').value) || null;
+  const p  = ano ? DB.Plano.carregar(ano) : null;
+  if (!el || !p) { if (el) el.innerHTML = ''; return; }
+  const dt  = new Date(p.publicadoEm).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+
+  let prazoHtml = '';
+  if (p.status === 'publicado' && ano) {
+    const textoPrazo = DB.Plano.textoPrazo(ano);
+    const podeEditar = DB.Plano.podeEditar(ano);
+    if (textoPrazo) {
+      prazoHtml = podeEditar
+        ? `<span class="badge badge--success" style="margin-left:8px;font-size:11px;">Edição até ${textoPrazo}</span>`
+        : `<span class="badge badge--danger" style="margin-left:8px;font-size:11px;">⚠️ Prazo encerrado</span>`;
+    }
+  }
+
+  el.innerHTML = p.status === 'publicado'
+    ? `<span class="status-pill status-pill--pub">✅ Publicado ${dt}</span>${prazoHtml}`
+    : `<span class="status-pill status-pill--draft">⏳ Rascunho ${dt}</span>`;
+
+  const barInfo = document.getElementById('gerarBarInfo');
+  const barSub  = document.getElementById('gerarBarSub');
+  if (barInfo && barSub) {
+    if (p.status === 'publicado') {
+      barInfo.textContent = `Plano ${ano || ''} publicado`;
+      barSub.textContent  = 'Os municípios já podem acessar seus cronogramas';
+    } else {
+      barInfo.textContent = `Rascunho — ${((p.taxa||0)*100).toFixed(0)}% das metas planejadas`;
+      barSub.textContent  = 'Clique em Gerar Plano para atualizar';
+    }
+  }
+}
+
+function publicarPlano() {
+  if (!planoAtual?.cfg?.ano) return;
+  publicarAno(planoAtual.cfg.ano);
+}
+
+function despublicarPlano() {
+  if (!planoAtual?.cfg?.ano) return;
+  despublicarAno(planoAtual.cfg.ano);
+}
+
+/* ════════════════════════════════════════════
+   CSV
+   ════════════════════════════════════════════ */
+function exportarCSV() {
+  if (!planoAtual) return;
+  const p      = planoAtual;
+  const tercasD = p.tercas.map(s => new Date(s));
+  let csv = 'Semana,Data,Mes,Municipio,Regra,Tipo_A,Tipo_B,Total_Viagem\n';
+  for (const si of p.semanasAtivasIdx) {
+    const data = Utils.fmtData(tercasD[si]);
+    const mes  = Utils.MESES_PT[tercasD[si].getMonth()];
+    let first  = true;
+    p.municipios.forEach((m, i) => {
+      const qtd = p.dist[i][si];
+      if (qtd > 0) {
+        const regra = temRegraPersonalizada(m.regras) ? 'Personalizado' : 'Global';
+        csv += `${si+1},${data},${mes},${m.nome},${regra},${qtd},${qtd},${first ? p.totSem[si]*2 : ''}\n`;
+        first = false;
+      }
+    });
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8;' }));
+  a.download = `vigiagua_plano_${p.cfg.ano}.csv`;
+  a.click();
+}
+
+/* ════════════════════════════════════════════
+   UTILS
+   ════════════════════════════════════════════ */
+function sair() { DB.Auth.logoutAsync().finally(() => { window.location.href = 'index.html'; }); }
+
+let _tt;
+function mostrarToast(msg) {
+  let t = document.getElementById('_toast');
+  if (!t) {
+    t = document.createElement('div'); t.id = '_toast';
+    Object.assign(t.style, {
+      position:'fixed', bottom:'24px', left:'50%', transform:'translateX(-50%)',
+      background:'var(--slate-800)', color:'#fff', padding:'10px 22px',
+      borderRadius:'8px', fontSize:'13.5px', fontWeight:'500',
+      boxShadow:'var(--shadow-lg)', zIndex:'9999',
+      transition:'opacity .3s', pointerEvents:'none',
+    });
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity = '1';
+  clearTimeout(_tt);
+  _tt = setTimeout(() => { t.style.opacity = '0'; }, 2800);
+}
+</script>
+</body>
+</html>
