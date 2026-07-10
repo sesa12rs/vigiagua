@@ -434,7 +434,13 @@ const DB = (() => {
     client() {
       if (!this._client && this.habilitado()) {
         const cfg = window.VIGIAGUA_SUPABASE;
-        this._client = window.supabase.createClient(cfg.url, cfg.anonKey);
+        // Normaliza a URL: aceita colada com /rest/v1, /auth/v1, barra final ou espaços.
+        // A URL correta é apenas a raiz do projeto: https://xxxx.supabase.co
+        const url = String(cfg.url).trim()
+          .replace(/\/+$/, '')
+          .replace(/\/(rest|auth|realtime|storage)\/v1$/i, '')
+          .replace(/\/+$/, '');
+        this._client = window.supabase.createClient(url, String(cfg.anonKey).trim());
       }
       return this._client;
     },
