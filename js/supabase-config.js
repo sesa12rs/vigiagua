@@ -13,6 +13,6 @@
  * de demonstração. Nada quebra sem o Supabase.
  */
 window.VIGIAGUA_SUPABASE = {
-  url: 'https://usxaxdbxecdcbnxpkkhx.supabase.co/rest/v1/',      // ex.: 'https://abcdefghijklm.supabase.co'
+  url: 'https://usxaxdbxecdcbnxpkkhx.supabase.co',      // ex.: 'https://abcdefghijklm.supabase.co'
   anonKey: 'sb_publishable_0mT_c2FE8a99DcR81BqS2A_2JSTyfp8',  // chave "anon public" (NÃO use a service_role aqui!)
 };
