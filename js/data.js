@@ -506,7 +506,8 @@ const DB = (() => {
       const { data: rows, error: e2 } = await cli.from('usuarios').select('*').eq('id', uid).limit(1);
       if (e2 || !rows || !rows.length) {
         await cli.auth.signOut();
-        return { ok: false, erro: 'Usuário autenticado, mas sem perfil cadastrado (tabela usuarios).' };
+        const detalhe = e2 ? ` Detalhe técnico: ${e2.message}` : ' A tabela usuarios está vazia para este usuário — execute o bloco 3 do schema.sql.';
+        return { ok: false, erro: 'Usuário autenticado, mas o perfil não pôde ser lido.' + detalhe };
       }
       const u = rows[0];
       const sessao = { userId: u.id, perfil: u.perfil, nome: u.nome, municipioId: u.municipio_id };

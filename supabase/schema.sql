@@ -15,13 +15,17 @@ create table if not exists public.usuarios (
 
 alter table public.usuarios enable row level security;
 
+-- Helper security definer (dono ignora RLS → sem recursão)
+create or replace function public.eh_regional() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from usuarios u where u.id = auth.uid() and u.perfil = 'regional');
+$$;
+
 -- Cada usuário lê o próprio registro; a Regional lê todos.
+-- IMPORTANTE: usar a função (security definer) evita recursão infinita de RLS.
 drop policy if exists usuarios_select on public.usuarios;
 create policy usuarios_select on public.usuarios
-  for select using (
-    id = auth.uid()
-    or exists (select 1 from public.usuarios r where r.id = auth.uid() and r.perfil = 'regional')
-  );
+  for select using ( id = auth.uid() or public.eh_regional() );
 
 -- ── 2. Armazém chave-valor sincronizado com o localStorage ──
 -- As chaves espelham o cache local: va_config, va_plano_2027,
@@ -36,11 +40,6 @@ create table if not exists public.va_store (
 alter table public.va_store enable row level security;
 
 -- Helpers de política
-create or replace function public.eh_regional() returns boolean
-language sql stable security definer set search_path = public as $$
-  select exists (select 1 from usuarios u where u.id = auth.uid() and u.perfil = 'regional');
-$$;
-
 create or replace function public.meu_municipio() returns text
 language sql stable security definer set search_path = public as $$
   select u.municipio_nome from usuarios u where u.id = auth.uid();
