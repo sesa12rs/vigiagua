@@ -468,6 +468,13 @@ const DB = (() => {
       return { ok: true, chaves: (data || []).length };
     },
 
+    /** Envia a chave IMEDIATAMENTE (troca de etapa, botões, saída da página). */
+    pushAgora(key) {
+      if (!this.habilitado() || !this._sincronizavel(key)) return;
+      clearTimeout(this._timers[key]);
+      this._push(key);
+    },
+
     /** Agenda o envio de uma chave (chamado por set() e pelos módulos). */
     notify(key) {
       if (!this.habilitado() || !this._sincronizavel(key)) return;

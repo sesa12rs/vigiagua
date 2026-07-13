@@ -72,6 +72,47 @@ check('coleta extra recriada', !!ex2);
 check('local da extra restaurado', ex2 && ex2.querySelector('.local-input').value==='Reclamação bairro X');
 check('MB da extra (desmarcado) restaurado', ex2 && ex2.querySelector('.mb-chk').checked===false);
 
+
+// ── Cenários de salvamento em trocas de etapa/botões ──
+console.log('\n[Salvamento nas trocas de etapa]');
+{
+  // (a) Só etapa 1 + Próximo → dados gravados
+  const seedA = {}; for (const k of Object.keys(seed)) seedA[k] = seed[k];
+  const mA = loadPage('municipio.html', { session:{userId:102,perfil:'municipio',nome:'Altônia',municipioId:3}, seedStorage:seedA });
+  mA.window.alert=()=>{};
+  const dA = mA.window.document;
+  ['populacao','endereco','secretario','responsavel','profissional'].forEach((id,i)=>dA.getElementById(id).value = i===0?'20500':'SóEtapa1');
+  dA.getElementById('municipio').value='Altônia';
+  dA.getElementById('vigilancia').value='Vigilância Sanitária';
+  mA.window.eval('irEtapa2()');   // usuário clica Próximo e SAI
+  const salvoA = JSON.parse(mA.window.localStorage.getItem(mA.window.eval('_munplanoKey()')) || 'null');
+  check('etapa1+Próximo grava os campos', !!salvoA && salvoA.campos.secretario==='SóEtapa1', JSON.stringify(salvoA?.campos||{}).slice(0,60));
+  check('etapa1+Próximo grava a planilha', !!salvoA && salvoA.normais.length>0, `normais=${salvoA?.normais?.length}`);
+
+  // (b) Extra adicionada SEM editar nenhum campo → gravada
+  mA.window.eval('irEtapa3b()');
+  mA.window.eval('adicionarColetaExtra()');
+  const salvoB = JSON.parse(mA.window.localStorage.getItem(mA.window.eval('_munplanoKey()')));
+  check('extra adicionada sem edição já é gravada', salvoB.extras.length===1, `extras=${salvoB.extras.length}`);
+  mA.window.eval("excluirColetaExtra(mA_dummy)".replace('mA_dummy',"document.querySelector('#corpoTabelaExtras tr')"));
+  const salvoB2 = JSON.parse(mA.window.localStorage.getItem(mA.window.eval('_munplanoKey()')));
+  check('extra excluída também grava', salvoB2.extras.length===0, `extras=${salvoB2.extras.length}`);
+
+  // (c) Proteção: reabrir, ficar na etapa 1, editar campo → NÃO apaga coletas salvas
+  mA.window.eval('adicionarColetaExtra()');   // deixa 1 extra salva
+  const seedC = {}; for(let i=0;i<mA.window.localStorage.length;i++){const k=mA.window.localStorage.key(i);seedC[k]=mA.window.localStorage.getItem(k);}
+  const mC = loadPage('municipio.html', { session:{userId:102,perfil:'municipio',nome:'Altônia',municipioId:3}, seedStorage:seedC });
+  mC.window.alert=()=>{};
+  const dC = mC.window.document;
+  dC.getElementById('municipio').value='Altônia';
+  dC.getElementById('secretario').value='EditadoNaEtapa1';
+  mC.window.eval('salvarPlanoMunicipal(true)');   // salva com a tabela ainda NÃO gerada
+  const salvoC = JSON.parse(mC.window.localStorage.getItem(mC.window.eval('_munplanoKey()')));
+  check('campo atualizado', salvoC.campos.secretario==='EditadoNaEtapa1');
+  check('coletas normais preservadas (tabela não gerada)', salvoC.normais.length>0, `normais=${salvoC.normais.length}`);
+  check('extras preservadas (tabela não gerada)', salvoC.extras.length===1, `extras=${salvoC.extras.length}`);
+}
+
 // ── Smoke do DB.Sync com Supabase falso ──
 console.log('\n[DB.Sync — smoke com cliente falso]');
 const m3 = loadPage('municipio.html', { session:{userId:102,perfil:'municipio',nome:'Altônia',municipioId:3}, seedStorage:seed2 });

@@ -669,6 +669,12 @@
 
     // Restaura os campos preenchidos anteriormente (plano municipal salvo)
     restaurarCamposMunicipais();
+
+    // Auto-salvamento já na etapa 1 (não só depois de gerar a planilha)
+    _ligarAutoSalvarCampos();
+
+    // Última chance ao fechar/sair da página
+    window.addEventListener('beforeunload', () => { try { salvarPlanoMunicipal(true); } catch (e) {} });
   }
   if (DB.Sync.habilitado()) { DB.Sync.ready.then(init); } else { init(); }
 
@@ -839,9 +845,9 @@
     window.scrollTo(0, 0);
   }
 
-  function voltarEtapa1()  { ativarEtapa('etapa1', 1); }
-  function voltarEtapa3b() { ativarEtapa('etapa3', 2); }
-  function voltarEtapa3()  { ativarEtapa('etapa3b', 3); }
+  function voltarEtapa1()  { salvarPlanoMunicipal(true); ativarEtapa('etapa1', 1); }
+  function voltarEtapa3b() { salvarPlanoMunicipal(true); ativarEtapa('etapa3', 2); }
+  function voltarEtapa3()  { salvarPlanoMunicipal(true); ativarEtapa('etapa3b', 3); }
 
   function irEtapa2() {
     if (!modoLeitura) {
@@ -857,6 +863,7 @@
     gerarPlanilhaDoCronograma();
     restaurarPlanoMunicipal();
     _ligarAutoSalvarPlanoMunicipal();
+    salvarPlanoMunicipal(true);   // grava já ao avançar (campos + planilha)
   }
 
   /* ═══════════════════════════════════════════
@@ -871,7 +878,7 @@
     return `va_munplano_${mun}_${ano}`;
   }
 
-  function salvarPlanoMunicipal() {
+  function salvarPlanoMunicipal(imediato = false) {
     if (modoLeitura) return;
     const mun = document.getElementById('municipio')?.value;
     const ano = document.getElementById('ano')?.value;
@@ -902,6 +909,18 @@
     const extras = [];
     document.querySelectorAll('#corpoTabelaExtras tr').forEach(tr => extras.push(lerLinha(tr)));
 
+    // Proteção: se a planilha ainda não foi gerada nesta sessão (tabela vazia),
+    // preserva as coletas salvas anteriormente — atualiza só os campos.
+    if (!normais.length && !extras.length) {
+      try {
+        const ant = JSON.parse(localStorage.getItem(_munplanoKey()) || 'null');
+        if (ant && ant.v === 1) {
+          if (Array.isArray(ant.normais)) normais.push(...ant.normais);
+          if (Array.isArray(ant.extras))  extras.push(...ant.extras);
+        }
+      } catch (e) { /* ignora */ }
+    }
+
     const obj = {
       v: 1,
       salvoEm: new Date().toISOString(),
@@ -917,7 +936,10 @@
     };
     try {
       localStorage.setItem(_munplanoKey(), JSON.stringify(obj));
-      if (typeof DB !== 'undefined' && DB.Sync) DB.Sync.notify(_munplanoKey());
+      if (typeof DB !== 'undefined' && DB.Sync) {
+        if (imediato) DB.Sync.pushAgora(_munplanoKey());
+        else DB.Sync.notify(_munplanoKey());
+      }
     } catch (e) { /* quota */ }
   }
 
@@ -927,15 +949,19 @@
     _munSaveTimer = setTimeout(salvarPlanoMunicipal, 800);
   }
 
+  function _ligarAutoSalvarCampos() {
+    ['populacao','endereco','secretario','responsavel','profissional','vigilancia'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.oninput = _agendarSalvarPlanoMunicipal; el.onchange = _agendarSalvarPlanoMunicipal; }
+    });
+  }
+
   function _ligarAutoSalvarPlanoMunicipal() {
     ['corpoTabela', 'corpoTabelaExtras'].forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.oninput = _agendarSalvarPlanoMunicipal; el.onchange = _agendarSalvarPlanoMunicipal; }
     });
-    ['populacao','endereco','secretario','responsavel','profissional','vigilancia'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('change', _agendarSalvarPlanoMunicipal);
-    });
+    _ligarAutoSalvarCampos();
   }
 
   /** Restaura só os campos da etapa 1 (usado no init, antes da validação). */
@@ -1017,6 +1043,7 @@
   }
 
   function irEtapa3b() {
+    salvarPlanoMunicipal(true);
     const mainRows = document.getElementById('corpoTabela')?.querySelectorAll('tr') || [];
     window.baseNumeroExtras = mainRows.length;
     if (modoLeitura) travarTabela('corpoTabelaExtras');
@@ -1024,6 +1051,7 @@
   }
 
   function irEtapa4() {
+    salvarPlanoMunicipal(true);
     gerarPreview();
     if (modoLeitura) {
       const preview = document.getElementById('previewContent');
@@ -1413,12 +1441,14 @@
     tbody.appendChild(tr);
     atualizarSemanaPorData(tr);
     atualizarIDsExtras();
+    salvarPlanoMunicipal(true);
   }
 
   function excluirColetaExtra(tr) {
     tr.remove();
     renumerarExtras();
     atualizarIDsExtras();
+    salvarPlanoMunicipal(true);
   }
 
   function inicializarEventosLinhaExtra(tr) {
@@ -1868,6 +1898,10 @@
      GERAR PDF
      ═══════════════════════════════════════════ */
   function gerarPDF() {
+    salvarPlanoMunicipal(true);
+    salvarEdicoesPreview();
+    if (typeof DB !== 'undefined' && DB.Sync) DB.Sync.pushAgora(_previewStorageKey());
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
