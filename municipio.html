@@ -917,7 +917,7 @@
     };
     try {
       localStorage.setItem(_munplanoKey(), JSON.stringify(obj));
-      if (window.DB?.Sync) DB.Sync.notify(_munplanoKey());
+      if (typeof DB !== 'undefined' && DB.Sync) DB.Sync.notify(_munplanoKey());
     } catch (e) { /* quota */ }
   }
 
@@ -1539,14 +1539,14 @@
     if (!p || !p.childElementCount) return;
     try {
       localStorage.setItem(_previewStorageKey(), p.innerHTML);
-      if (window.DB?.Sync) DB.Sync.notify(_previewStorageKey());
+      if (typeof DB !== 'undefined' && DB.Sync) DB.Sync.notify(_previewStorageKey());
     } catch (e) { /* quota */ }
   }
 
   function restaurarTextoPadrao() {
     if (!confirm('Restaurar o texto padrão? Todas as edições de texto feitas neste plano serão descartadas (as tabelas de coletas não são afetadas).')) return;
     localStorage.removeItem(_previewStorageKey());
-    if (window.DB?.Sync) DB.Sync.notify(_previewStorageKey());
+    if (typeof DB !== 'undefined' && DB.Sync) DB.Sync.notify(_previewStorageKey());
     gerarPreview();
     mostrarToast('📄 Texto padrão restaurado.');
   }

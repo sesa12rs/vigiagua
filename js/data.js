@@ -15,6 +15,11 @@
  * Fase 2: substituir implementações por chamadas Supabase apenas aqui.
  */
 
+if (typeof window !== 'undefined') {
+  window.VIGIAGUA_VERSAO = 'fase2-v40';
+  try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
+}
+
 const DB = (() => {
 
   function get(key) {
@@ -470,23 +475,63 @@ const DB = (() => {
       this._timers[key] = setTimeout(() => this._push(key), 800);
     },
 
+    ultimoErro: null,
+
+    _falha(key, msg) {
+      this.ultimoErro = { key, msg, em: new Date().toISOString() };
+      console.error('[Sync] FALHA ao enviar "' + key + '": ' + msg);
+      if (typeof window !== 'undefined' && typeof window.mostrarToast === 'function') {
+        window.mostrarToast('⚠️ Não foi possível salvar no banco: ' + msg);
+      }
+    },
+
     async _push(key) {
       try {
         const cli = this.client();
         const { data: sess } = await cli.auth.getSession();
-        if (!sess?.session) return;
+        if (!sess?.session) { this._falha(key, 'sem sessão de login no Supabase (entre novamente)'); return; }
         const value = localStorage.getItem(key);
         if (value === null) {
           const { error } = await cli.from('va_store').delete().eq('key', key);
-          if (error) console.warn('[Sync] delete falhou:', key, error.message);
+          if (error) this._falha(key, error.message);
         } else {
           const { error } = await cli.from('va_store').upsert(
             { key, value, updated_at: new Date().toISOString() },
             { onConflict: 'key' }
           );
-          if (error) console.warn('[Sync] push falhou:', key, error.message);
+          if (error) this._falha(key, error.message);
+          else console.log('[Sync] ✓ enviado:', key);
         }
-      } catch (e) { console.warn('[Sync] push exception:', key, e.message); }
+      } catch (e) { this._falha(key, e.message); }
+    },
+
+    /** Diagnóstico completo — rode DB.Sync.diagnostico() no console (F12). */
+    async diagnostico() {
+      const rel = { versao: (typeof window !== 'undefined' && window.VIGIAGUA_VERSAO) || '?', habilitado: this.habilitado() };
+      if (!rel.habilitado) { console.table(rel); return rel; }
+      const cli = this.client();
+      const { data: s } = await cli.auth.getSession();
+      rel.sessaoSupabase = s?.session ? (s.session.user.email || s.session.user.id) : 'NENHUMA — faça login de novo';
+      let sess = null; try { sess = JSON.parse(localStorage.getItem('va_session') || 'null'); } catch (e) {}
+      rel.perfilLocal = sess ? `${sess.perfil} / ${sess.nome}` : 'nenhum';
+      if (s?.session) {
+        const { data: u, error: eu } = await cli.from('usuarios').select('*').eq('id', s.session.user.id).limit(1);
+        const linha = u && u[0];
+        rel.tabelaUsuarios = eu ? 'ERRO: ' + eu.message : (linha ? `${linha.perfil} / municipio_nome=${JSON.stringify(linha.municipio_nome)}` : 'USUÁRIO NÃO ENCONTRADO — rode o bloco 3 do schema.sql');
+        if (linha) {
+          const chaveTeste = linha.perfil === 'regional'
+            ? 'va_plano_teste_diagnostico'
+            : 'va_munplano_' + linha.municipio_nome + '_teste_diagnostico';
+          rel.chaveTestada = chaveTeste;
+          const { error: ew } = await cli.from('va_store').upsert(
+            { key: chaveTeste, value: 'diagnostico', updated_at: new Date().toISOString() }, { onConflict: 'key' });
+          rel.escritaNoBanco = ew ? 'FALHOU: ' + ew.message : 'OK ✓';
+          if (!ew) await cli.from('va_store').delete().eq('key', chaveTeste);
+        }
+      }
+      rel.ultimoErro = this.ultimoErro ? `${this.ultimoErro.key}: ${this.ultimoErro.msg}` : 'nenhum';
+      console.table(rel);
+      return rel;
     },
 
     /** Promise que as páginas aguardam antes de inicializar. */
@@ -535,3 +580,6 @@ const DB = (() => {
   _syncRef = Sync;
   return { Auth, Usuarios, Municipios, Config, Semanas, Feriados, Plano, Sync };
 })();
+
+// Exposição explícita no window (const de script clássico não vira window.DB sozinho)
+if (typeof window !== 'undefined') window.DB = DB;
