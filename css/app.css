@@ -824,3 +824,17 @@ table.data-table td input:focus {
   .btn-group { gap: 8px; }
   .btn--lg { padding: 11px 20px; font-size: 14px; }
 }
+
+/* ── Painéis do planner: heatmap do laboratório e tabela do consolidado ── */
+.lab-heat { border-collapse: collapse; font-size: 11px; }
+.lab-heat th, .lab-heat td { border: 1px solid var(--slate-200); padding: 3px 5px; text-align: center; min-width: 26px; }
+.lab-heat th { background: var(--slate-50); color: var(--slate-600); font-weight: 600; }
+.lab-heat__mun { text-align: left !important; white-space: nowrap; position: sticky; left: 0; background: #fff; font-weight: 600; color: var(--slate-700); z-index: 1; }
+.lab-heat thead .lab-heat__mun { background: var(--slate-50); }
+.lab-heat__tot { font-weight: 700; background: var(--slate-50); }
+.lab-heat__foot td { font-weight: 700; background: var(--slate-100); color: var(--slate-700); }
+.cons-table { border-collapse: collapse; width: 100%; font-size: 12px; }
+.cons-table th, .cons-table td { border-bottom: 1px solid var(--slate-100); padding: 6px 8px; text-align: left; }
+.cons-table th { background: var(--slate-50); color: var(--slate-600); font-weight: 600; position: sticky; top: 0; white-space: nowrap; }
+.cons-table th:nth-child(n+8):nth-child(-n+11), .cons-table td:nth-child(n+8):nth-child(-n+11) { text-align: center; }
+.cons-table tbody tr:hover { background: var(--blue-50); }

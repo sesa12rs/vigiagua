@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v40';
+  window.VIGIAGUA_VERSAO = 'fase2-v45';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -413,6 +413,100 @@ const DB = (() => {
   };
 
   /* ══════════════════════════════════════════════
+     PLANO MUNICIPAL — leitura de acompanhamento
+     ══════════════════════════════════════════════
+     Lê os blobs va_munplano_<Nome>_<Ano> (gravados pelo
+     módulo municipal) de forma centralizada, para o painel
+     de acompanhamento da Regional e para o próprio município
+     concluir/reabrir o plano. Não muda o formato de
+     armazenamento — apenas soma os campos status/concluidoEm
+     ao blob que já existe.
+
+     status:
+       'nao_iniciado' — não existe blob do município no ano
+       'rascunho'     — existe blob, ainda não concluído (padrão)
+       'concluido'    — o município marcou como concluído
+     "fora do prazo" NÃO é um status gravado: é derivado do
+     prazo de edição do ano (DB.Plano.podeEditar) — sempre atual.
+     ══════════════════════════════════════════════ */
+  const MunPlano = {
+    _key(nome, ano) { return `va_munplano_${nome}_${ano}`; },
+
+    carregar(nome, ano) { return get(this._key(nome, ano)); },
+
+    /** Status bruto (sem considerar prazo): nao_iniciado | rascunho | concluido. */
+    statusBruto(nome, ano) {
+      const p = this.carregar(nome, ano);
+      if (!p) return 'nao_iniciado';
+      return p.status === 'concluido' ? 'concluido' : 'rascunho';
+    },
+
+    /**
+     * true quando o prazo de edição do ano já encerrou e o plano
+     * ainda não foi concluído (aplica-se inclusive a "não iniciado",
+     * que representa município que perdeu o prazo sem entregar).
+     */
+    foraDoPrazo(nome, ano) {
+      if (this.statusBruto(nome, ano) === 'concluido') return false;
+      return !DB.Plano.podeEditar(ano);
+    },
+
+    /**
+     * Progresso de preenchimento: quantas coletas (normais +
+     * filhas + extras) já têm o LOCAL informado, sobre o total.
+     */
+    progresso(nome, ano) {
+      const p = this.carregar(nome, ano);
+      if (!p) return { total: 0, comLocal: 0, pct: 0 };
+      let total = 0, comLocal = 0;
+      const conta = c => { if (!c) return; total++; if ((c.local || '').trim()) comLocal++; };
+      (p.normais || []).forEach(n => { conta(n); if (n.filho) conta(n.filho); });
+      (p.extras  || []).forEach(conta);
+      return { total, comLocal, pct: total ? Math.round((comLocal / total) * 100) : 0 };
+    },
+
+    /** Marca como concluído (chamado pelo próprio município). */
+    concluir(nome, ano) {
+      const k = this._key(nome, ano);
+      const p = get(k);
+      if (!p) return false;
+      set(k, { ...p, status: 'concluido', concluidoEm: new Date().toISOString() });
+      return true;
+    },
+
+    /** Reabre para edição (volta a rascunho). */
+    reabrir(nome, ano) {
+      const k = this._key(nome, ano);
+      const p = get(k);
+      if (!p) return false;
+      const q = { ...p, status: 'rascunho' };
+      delete q.concluidoEm;
+      set(k, q);
+      return true;
+    },
+
+    /** Resumo consolidado de todos os municípios de um ano (para o painel). */
+    resumoTodos(ano) {
+      return DB.Municipios.listar().map(m => {
+        const p    = this.carregar(m.nome, ano);
+        const prog = this.progresso(m.nome, ano);
+        return {
+          id:          m.id,
+          nome:        m.nome,
+          meta:        m.meta,
+          status:      this.statusBruto(m.nome, ano),
+          foraDoPrazo: this.foraDoPrazo(m.nome, ano),
+          total:       prog.total,
+          comLocal:    prog.comLocal,
+          pct:         prog.pct,
+          salvoEm:     p?.salvoEm     || null,
+          concluidoEm: p?.concluidoEm || null,
+        };
+      });
+    },
+  };
+
+  /* ══════════════════════════════════════════════
      SYNC — Fase 2 (Supabase como fonte de verdade,
      localStorage como cache local de trabalho)
 
@@ -585,7 +679,7 @@ const DB = (() => {
   };
 
   _syncRef = Sync;
-  return { Auth, Usuarios, Municipios, Config, Semanas, Feriados, Plano, Sync };
+  return { Auth, Usuarios, Municipios, Config, Semanas, Feriados, Plano, MunPlano, Sync };
 })();
 
 // Exposição explícita no window (const de script clássico não vira window.DB sozinho)
