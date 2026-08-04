@@ -45,43 +45,53 @@ language sql stable security definer set search_path = public as $$
   select u.municipio_nome from usuarios u where u.id = auth.uid();
 $$;
 
--- Leitura: qualquer usuário autenticado (municípios precisam ler os planos publicados).
-drop policy if exists va_store_select on public.va_store;
-create policy va_store_select on public.va_store
-  for select using (auth.uid() is not null);
+-- ═══════════════════════════════════════════════════════════════
+-- POLÍTICAS DE ACESSO (RLS) — endurecidas na v46
+-- A Regional é ADMINISTRADORA: lê e grava qualquer chave (necessário
+-- para os painéis de acompanhamento/consolidado e para o backup/
+-- restauração feitos pelo planner). Cada MUNICÍPIO lê apenas o
+-- planejamento publicado (compartilhado entre todos) e as PRÓPRIAS
+-- chaves, e grava apenas as próprias. Um município NÃO enxerga o plano
+-- preenchido nem o texto de preview de outro município.
+-- ═══════════════════════════════════════════════════════════════
 
--- Escrita da REGIONAL: chaves de planejamento (config, planos, semanas, feriados, municípios).
-drop policy if exists va_store_regional_write on public.va_store;
-create policy va_store_regional_write on public.va_store
+-- REGIONAL: acesso total (leitura e escrita de qualquer chave).
+drop policy if exists va_store_regional_write on public.va_store;   -- nome antigo (pré-v46)
+drop policy if exists va_store_regional_all on public.va_store;
+create policy va_store_regional_all on public.va_store
   for all
+  using ( public.eh_regional() )
+  with check ( public.eh_regional() );
+
+-- MUNICÍPIO — LEITURA: planejamento publicado (compartilhado) + as próprias chaves.
+-- (Substitui a política antiga que deixava qualquer autenticado ler TUDO.)
+drop policy if exists va_store_select on public.va_store;
+drop policy if exists va_store_municipio_select on public.va_store;
+create policy va_store_municipio_select on public.va_store
+  for select
   using (
-    public.eh_regional() and (
+    auth.uid() is not null and (
       key in ('va_config', 'va_planos_index', 'va_feriados', 'va_municipios')
       or key like 'va\_plano\_%' escape '\'
       or key like 'va\_semanas\_%' escape '\'
-    )
-  )
-  with check (
-    public.eh_regional() and (
-      key in ('va_config', 'va_planos_index', 'va_feriados', 'va_municipios')
-      or key like 'va\_plano\_%' escape '\'
-      or key like 'va\_semanas\_%' escape '\'
+      or key like 'va\_munplano\_'   || public.meu_municipio() || '\_%' escape '\'
+      or key like 'va\_previewedit\_' || public.meu_municipio() || '\_%' escape '\'
     )
   );
 
--- Escrita do MUNICÍPIO: somente as próprias chaves (plano municipal e texto do preview).
+-- MUNICÍPIO — ESCRITA: somente as próprias chaves (plano municipal e texto do preview).
 drop policy if exists va_store_municipio_write on public.va_store;
 create policy va_store_municipio_write on public.va_store
   for all
   using (
     public.meu_municipio() is not null and (
-      key like 'va\_munplano\_' || public.meu_municipio() || '\_%' escape '\'
+      key like 'va\_munplano\_'   || public.meu_municipio() || '\_%' escape '\'
       or key like 'va\_previewedit\_' || public.meu_municipio() || '\_%' escape '\'
     )
   )
   with check (
     public.meu_municipio() is not null and (
-      key like 'va\_munplano\_' || public.meu_municipio() || '\_%' escape '\'
+      key like 'va\_munplano\_'   || public.meu_municipio() || '\_%' escape '\'
       or key like 'va\_previewedit\_' || public.meu_municipio() || '\_%' escape '\'
     )
   );

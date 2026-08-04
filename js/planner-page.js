@@ -36,6 +36,7 @@ function init() {
   renderLaboratorio();
   renderConsolidado();
   atualizarAnoContexto();
+  _backupInfo();
 
   // Carrega o plano do ANO atualmente no formulário (não "o mais recente"),
   // mantendo formulário e resultado sempre coerentes.
@@ -533,6 +534,89 @@ function baixarCsvConsolidado() {
   a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }));
   a.download = `vigiagua_consolidado_${consAno()}.csv`;
   a.click();
+}
+
+/* ════════════════════════════════════════════
+   BACKUP E SEGURANÇA (Regional)
+   Exporta/restaura todo o va_store via DB.Sync. Sem armazenamento
+   novo — arquivo JSON local + upsert no banco. O lembrete usa uma
+   marca local por máquina (va_ultimo_backup em localStorage).
+   ════════════════════════════════════════════ */
+var _BACKUP_DIAS = 7;
+
+function _ultimoBackup() {
+  const v = localStorage.getItem('va_ultimo_backup');
+  return v ? new Date(v) : null;
+}
+function _diasDesde(d) {
+  return d ? Math.floor((Date.now() - d.getTime()) / 86400000) : Infinity;
+}
+
+async function exportarBackup() {
+  mostrarToast('💾 Preparando backup…');
+  let res;
+  try { res = await DB.Sync.exportar(); }
+  catch (e) { mostrarToast('⚠️ Falha ao exportar: ' + e.message); return; }
+  if (!res || !res.ok) { mostrarToast('⚠️ Falha ao exportar: ' + ((res && res.erro) || 'erro')); return; }
+  const arquivo = {
+    app: 'VigiÁgua', tipo: 'backup-va_store',
+    versao: (window.VIGIAGUA_VERSAO || '?'),
+    geradoEm: res.geradoEm, origem: res.origem, total: res.total,
+    registros: res.registros,
+  };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(arquivo, null, 2)], { type: 'application/json' }));
+  a.download = `vigiagua_backup_${res.geradoEm.slice(0, 10)}.json`;
+  a.click();
+  localStorage.setItem('va_ultimo_backup', new Date().toISOString());
+  _backupInfo();
+  mostrarToast(`✅ Backup gerado (${res.total} registros).`);
+}
+
+async function restaurarBackup(file) {
+  if (!file) return;
+  let arquivo;
+  try { arquivo = JSON.parse(await file.text()); }
+  catch (e) { mostrarToast('⚠️ Arquivo inválido (não é um JSON).'); return; }
+  const registros = arquivo && arquivo.registros;
+  if (!registros || typeof registros !== 'object') { mostrarToast('⚠️ Este arquivo não é um backup do VigiÁgua.'); return; }
+  const n = Object.keys(registros).length;
+  const quando = arquivo.geradoEm ? new Date(arquivo.geradoEm).toLocaleString('pt-BR') : 'data desconhecida';
+  if (!confirm(`Restaurar ${n} registros do backup de ${quando}?\n\nIsto vai sobrescrever no banco as chaves contidas no arquivo (planos, configuração e os planos preenchidos pelos municípios). O que foi criado depois do backup NÃO é apagado.\n\nDeseja continuar?`)) return;
+  mostrarToast('♻️ Restaurando…');
+  let res;
+  try { res = await DB.Sync.importar(registros); }
+  catch (e) { mostrarToast('⚠️ Falha ao restaurar: ' + e.message); return; }
+  if (!res || !res.ok) { mostrarToast('⚠️ Falha ao restaurar: ' + ((res && (res.erro || (res.erros || []).join('; '))) || 'erro')); return; }
+  try { if (DB.Sync.habilitado()) await DB.Sync.pull(); } catch (e) { /* segue com o cache */ }
+  renderStatusPlano(); renderPainelPlanos(); renderAcompanhamento(); renderLaboratorio(); renderConsolidado();
+  _backupInfo();
+  mostrarToast(`✅ Restauração concluída (${res.total} registros).`);
+}
+
+function _backupInfo() {
+  const d = _ultimoBackup();
+  const dias = _diasDesde(d);
+  const info = document.getElementById('backupInfo');
+  if (info) {
+    info.textContent = d
+      ? `Último backup: ${d.toLocaleDateString('pt-BR')} (${dias === 0 ? 'hoje' : dias + ' dia(s) atrás'}).`
+      : 'Nenhum backup feito ainda nesta máquina.';
+  }
+  const rem = document.getElementById('backupReminder');
+  if (rem) {
+    if (dias >= _BACKUP_DIAS) {
+      rem.style.display = '';
+      rem.style.marginBottom = '12px';
+      rem.className = 'alert alert--warning';
+      rem.innerHTML = `<span class="alert__icon">⚠️</span><div class="alert__body">`
+        + (d ? `Faz <strong>${dias} dias</strong> desde o último backup dos dados oficiais.`
+             : `Você ainda <strong>não fez backup</strong> dos dados oficiais.`)
+        + ` <a href="#" onclick="exportarBackup();return false;" style="font-weight:700;">Exportar agora</a>.</div>`;
+    } else {
+      rem.style.display = 'none';
+    }
+  }
 }
 
 /* ════════════════════════════════════════════

@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v45';
+  window.VIGIAGUA_VERSAO = 'fase2-v46';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -639,6 +639,51 @@ const DB = (() => {
     get ready() {
       if (!this._pronto) this._pronto = this.pull().catch(() => ({ ok: false }));
       return this._pronto;
+    },
+
+    /**
+     * Exporta TODO o va_store para um objeto { registros: {key: value} }.
+     * Com Supabase ativo, lê do banco (a Regional lê tudo); sem Supabase,
+     * exporta o cache local. É a cópia de segurança dos dados oficiais.
+     */
+    async exportar() {
+      const registros = {};
+      if (this.habilitado()) {
+        const cli = this.client();
+        const { data: sess } = await cli.auth.getSession();
+        if (!sess?.session) return { ok: false, erro: 'sem sessão de login no Supabase (entre novamente)' };
+        const { data, error } = await cli.from('va_store').select('key, value');
+        if (error) return { ok: false, erro: error.message };
+        (data || []).forEach(r => { registros[r.key] = r.value; });
+        return { ok: true, origem: 'supabase', geradoEm: new Date().toISOString(), total: Object.keys(registros).length, registros };
+      }
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (this._sincronizavel(k)) registros[k] = localStorage.getItem(k);
+      }
+      return { ok: true, origem: 'local', geradoEm: new Date().toISOString(), total: Object.keys(registros).length, registros };
+    },
+
+    /**
+     * Restaura um backup: regrava (upsert) cada chave no banco e no cache.
+     * Semântica de restauração (não apaga chaves criadas depois do backup).
+     * Só toca em chaves sincronizáveis (proteção contra lixo no arquivo).
+     */
+    async importar(registros) {
+      if (!registros || typeof registros !== 'object') return { ok: false, erro: 'backup inválido' };
+      const chaves = Object.keys(registros).filter(k => this._sincronizavel(k));
+      chaves.forEach(k => localStorage.setItem(k, registros[k]));   // cache local sempre
+      if (!this.habilitado()) return { ok: true, origem: 'local', total: chaves.length, erros: [] };
+      const cli = this.client();
+      const { data: sess } = await cli.auth.getSession();
+      if (!sess?.session) return { ok: false, erro: 'sem sessão de login no Supabase (entre novamente)' };
+      const erros = [];
+      for (let i = 0; i < chaves.length; i += 200) {
+        const lote = chaves.slice(i, i + 200).map(k => ({ key: k, value: registros[k], updated_at: new Date().toISOString() }));
+        const { error } = await cli.from('va_store').upsert(lote, { onConflict: 'key' });
+        if (error) erros.push(error.message);
+      }
+      return { ok: erros.length === 0, origem: 'supabase', total: chaves.length, erros };
     },
   };
 

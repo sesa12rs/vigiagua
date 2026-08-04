@@ -64,3 +64,83 @@ a proteção real é o RLS. **Nunca** coloque a chave `service_role` no site.
   (um usuário Regional; um usuário por município).
 - **Offline**: sem internet, o sistema segue funcionando com o cache local;
   a sincronização retoma nas próximas gravações com conexão.
+
+---
+
+## Backup e restauração dos dados (v46)
+
+Os dados oficiais (planos, configuração e os planos preenchidos pelos
+municípios) vivem todos na tabela `va_store`. A partir da v46 o próprio
+planner tem, na aba **⚙️ Planejamento**, um card **"🛟 Backup e segurança
+dos dados"**:
+
+- **💾 Exportar backup agora** — baixa um arquivo
+  `vigiagua_backup_AAAA-MM-DD.json` com **tudo** que está no `va_store`.
+  Guarde-o em local seguro (e-mail, drive, pasta de rede). O sistema
+  registra a data do último backup **na máquina** e, se passar de uma
+  semana sem backup, mostra um aviso discreto no topo do planner.
+- **♻️ Restaurar de um arquivo** — lê um backup desses e **regrava** as
+  chaves no banco (upsert). É uma restauração: repõe o que estava no
+  arquivo e **não apaga** o que foi criado depois do backup. Pede
+  confirmação antes.
+
+Recomendação: **exportar toda semana** (o aviso ajuda a lembrar).
+
+### Alternativas de backup automático (opcional)
+
+Se quiser uma cópia automática, no lado do Supabase:
+
+- **Painel do Supabase** → *Database* → *Backups*: o plano Free tem
+  retenção limitada; planos pagos têm *Point-in-Time Recovery*.
+- **`pg_dump`** (linha de comando), usando a *connection string* do
+  projeto (em *Settings → Database*):
+  ```
+  pg_dump "postgresql://postgres:SENHA@db.SEU-PROJETO.supabase.co:5432/postgres" \
+    --table=public.va_store --data-only --column-inserts > va_store_backup.sql
+  ```
+  Dá para agendar isso num cron da sua máquina/servidor.
+
+---
+
+## Endurecimento do RLS (v46) — o que mudou e como verificar
+
+O `schema.sql` foi atualizado. **Reexecute o bloco de políticas** (a parte
+"POLÍTICAS DE ACESSO (RLS)") no *SQL Editor* do Supabase para aplicar. As
+mudanças:
+
+1. **Regional = administradora**: passa a poder ler **e gravar** qualquer
+   chave (antes só gravava as de planejamento). Isso é necessário para a
+   **restauração** de backup, que regrava também os planos dos municípios.
+2. **Município = leitura restrita**: antes, qualquer usuário autenticado
+   lia **todas** as chaves — inclusive os planos preenchidos dos outros
+   municípios. Agora cada município lê apenas o **planejamento publicado**
+   (config, planos, semanas, feriados, cadastro de municípios) e as
+   **próprias** chaves (`va_munplano_<ele>_*`, `va_previewedit_<ele>_*`).
+
+Nada muda no app: o `pull` continua sendo um `select` sem filtro e o RLS
+é que decide o que cada um recebe.
+
+### Roteiro de verificação (faça após aplicar)
+
+No *SQL Editor*, como **regional** (ou via app logado):
+
+- [ ] Logar como **Regional** no sistema e abrir as abas 📊 Acompanhamento,
+      🧪 Laboratório e 📋 Consolidado — devem continuar mostrando os dados
+      de **todos** os municípios (a Regional lê tudo).
+- [ ] Exportar um backup e conferir que o arquivo tem os
+      `va_munplano_*` de vários municípios.
+
+Logar como um **município** (ex.: `altonia@...`) e, no console (F12),
+rodar `await DB.Sync.pull()` seguido de checagens:
+
+- [ ] `localStorage.getItem('va_plano_2027')` **não** é nulo (lê o
+      planejamento publicado). ✔ esperado
+- [ ] `localStorage.getItem('va_munplano_Altônia_2027')` **não** é nulo
+      (lê o próprio plano). ✔ esperado
+- [ ] `localStorage.getItem('va_munplano_Umuarama_2027')` **é** nulo
+      (NÃO lê o plano de outro município). ✔ esperado — este é o ponto
+      central do endurecimento.
+
+Se o município ainda enxergar a chave de outro, confira se as políticas
+antigas (`va_store_select`) foram realmente removidas — o bloco novo já
+faz `drop policy if exists` delas, então basta reexecutá-lo.
