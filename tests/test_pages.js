@@ -131,7 +131,8 @@ console.log('\n[1] planner.html — primeira abertura (sem dados salvos)');
   check('roleta abre ao clicar', doc1.getElementById('yearpickPop').style.display !== 'none');
   {
     const anos = [...doc1.querySelectorAll('#yearpickWheel .yearpick__year')].map(e => parseInt(e.textContent));
-    check('faixa vai de 2 anos atrás até +5 (2026..2033)', Math.min(...anos) === 2026 && Math.max(...anos) === 2033, `min=${Math.min(...anos)} max=${Math.max(...anos)}`);
+    check('faixa simétrica: 5 atrás até 5 à frente (2023..2033)', Math.min(...anos) === 2023 && Math.max(...anos) === 2033, `min=${Math.min(...anos)} max=${Math.max(...anos)}`);
+    check('ordem crescente (menor no topo)', anos[0] === 2023 && anos[anos.length - 1] === 2033);
     check('ano atual (2028) destacado', /2028/.test(doc1.querySelector('#yearpickWheel .yearpick__year--sel').textContent));
   }
   window.eval('yearpickEscolher(2030)');

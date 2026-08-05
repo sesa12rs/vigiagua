@@ -867,7 +867,7 @@ function _anoPublicado(a) {
 function _anoFaixa(anoAtual) {
   let comPlano = [];
   try { comPlano = (DB.Plano.anos && DB.Plano.anos()) || []; } catch (e) { comPlano = []; }
-  const min = Math.min(anoAtual - 2, ...(comPlano.length ? comPlano : [anoAtual]));
+  const min = Math.min(anoAtual - 5, ...(comPlano.length ? comPlano : [anoAtual]));
   const max = anoAtual + 5;
   return { min, max };
 }
@@ -885,7 +885,7 @@ function _montarRoletaAnos(ano) {
   if (!wheel) return;
   const { min, max } = _anoFaixa(ano);
   let html = '';
-  for (let a = max; a >= min; a--) {   // mais recentes no topo
+  for (let a = min; a <= max; a++) {   // ordem crescente (menor no topo)
     const sel = a === ano;
     const pub = _anoPublicado(a);
     html += `<div class="yearpick__year${sel ? ' yearpick__year--sel' : ''}" role="option" aria-selected="${sel}" onclick="yearpickEscolher(${a})">`
