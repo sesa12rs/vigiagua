@@ -22,9 +22,10 @@ global.localStorage = {
   key: i => Object.keys(store)[i],
 };
 
-// "banco" Supabase falso + captura de upserts
+// "banco" Supabase falso + captura de upserts e deletes
 const banco = {};
 const upserts = [];
+const deletes = [];
 global.window = {
   VIGIAGUA_SUPABASE: { url: 'https://x.supabase.co', anonKey: 'k' },
   mostrarToast() {},
@@ -34,7 +35,7 @@ global.window = {
       from: () => ({
         select: async () => ({ data: Object.entries(banco).map(([key, value]) => ({ key, value })), error: null }),
         upsert: async (rows) => { (Array.isArray(rows) ? rows : [rows]).forEach(r => { banco[r.key] = r.value; upserts.push(r.key); }); return { error: null }; },
-        delete: () => ({ eq: async () => ({ error: null }) }),
+        delete: () => ({ eq: async (_col, key) => { delete banco[key]; deletes.push(key); return { error: null }; } }),
       }),
     }),
   },
@@ -100,6 +101,31 @@ banco['va_previewedit_Altônia_2027'] = JSON.stringify({ blocos: [] });
   check('export local pega chaves va_ sincronizáveis', 'va_munplano_Tapira_2027' in expLocal.registros);
   check('export local ignora va_session (não sincronizável)', !('va_session' in expLocal.registros));
   window.supabase = supabaseBackup;
+
+  console.log('\n[Excluir plano sincroniza a deleção remota]');
+  {
+    banco['va_plano_2028'] = JSON.stringify({ cfg: { ano: 2028 }, status: 'rascunho' });
+    localStorage.setItem('va_plano_2028', banco['va_plano_2028']);
+    localStorage.setItem('va_planos_index', JSON.stringify([2028]));
+    deletes.length = 0;
+    DB.Plano.excluir(2028);
+    await new Promise(r => setTimeout(r, 60));   // espera o _push assíncrono
+    check('removido do cache local', localStorage.getItem('va_plano_2028') === null);
+    check('DELETE enviado ao Supabase para va_plano_2028', deletes.includes('va_plano_2028'), JSON.stringify(deletes));
+    check('linha removida do banco (não ressuscita no pull)', !('va_plano_2028' in banco));
+    check('índice não contém mais 2028', !JSON.parse(localStorage.getItem('va_planos_index')).includes(2028));
+  }
+
+  console.log('\n[Auto-cura: plano órfão aparece no painel para ser excluído]');
+  {
+    // órfão: plano no cache, mas fora do índice (situação dos bugs antigos)
+    localStorage.setItem('va_plano_2035', JSON.stringify({ cfg: { ano: 2035 }, status: 'rascunho' }));
+    localStorage.setItem('va_planos_index', JSON.stringify([2027]));
+    const anos = DB.Plano.resumos().map(r => r.ano);
+    check('resumos() enxerga o órfão 2035', anos.includes(2035), JSON.stringify(anos));
+    DB.Plano.excluir(2035);
+    check('após excluir, órfão some de resumos()', !DB.Plano.resumos().map(r => r.ano).includes(2035));
+  }
 
   console.log(fail ? `\n\u274c ${fail} falha(s)` : '\n\u2705 Backup/restauração OK');
   process.exit(fail ? 1 : 0);

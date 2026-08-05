@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v49';
+  window.VIGIAGUA_VERSAO = 'fase2-v50';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -337,15 +337,34 @@ const DB = (() => {
 
     /** Exclui completamente o plano de um ano (rascunho ou publicado). */
     excluir(ano) {
-      localStorage.removeItem(`va_plano_${ano}`);
+      const chave = `va_plano_${ano}`;
+      localStorage.removeItem(chave);
+      // Avisa o Supabase para DELETAR a linha (valor local null → _push faz delete).
+      // Sem isto, o plano voltava no próximo pull ("rascunho ressuscitava").
+      if (_syncRef) _syncRef.pushAgora(chave);
       this._setIndex(this.anos().filter(a => a !== Number(ano)));
-      /* TODO Fase 2: await supabase.from('planos').delete().eq('ano', ano) */
+    },
+
+    /** Anos com plano REALMENTE presente no cache, mesmo que o índice esteja
+     *  dessincronizado. Cura órfãos antigos (plano gravado mas fora do índice),
+     *  tornando-os visíveis no painel para poderem ser excluídos. Só leitura. */
+    _anosPresentes() {
+      const doIndice = this._index();
+      const escaneados = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          const m = k && k.match(/^va_plano_(\d{4})$/);
+          if (m) escaneados.push(Number(m[1]));
+        }
+      } catch (e) { /* ambiente sem length/key: usa só o índice */ }
+      return [...new Set([...doIndice, ...escaneados])].sort((a, b) => a - b);
     },
 
     /** Resumo leve de todos os anos, para o painel de gestão. */
     resumos() {
       this._migrar();
-      return this._index().map(ano => {
+      return this._anosPresentes().map(ano => {
         const p = get(`va_plano_${ano}`);
         return {
           ano,
