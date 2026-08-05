@@ -91,7 +91,7 @@ console.log('\n[1] planner.html — primeira abertura (sem dados salvos)');
   check('seções antigas removidas (secAno/secParams/secSemanas/secFeriados)',
     !doc1.getElementById('secAno') && !doc1.getElementById('secParams') &&
     !doc1.getElementById('secSemanas') && !doc1.getElementById('secFeriados'));
-  check('campo de ano fica na barra de contexto (topo)', !!doc1.getElementById('anoInput') && doc1.getElementById('anoInput').type === 'number');
+  check('seletor de ano GLOBAL fica no topo (governa todas as abas)', !!doc1.getElementById('anoGlobalSel') && !!doc1.getElementById('anoInput'));
   check('campo global de prazo removido', !doc1.getElementById('cfgPrazoEdicao'));
   check('capacidade mora dentro de Regras de Distribuição',
     doc1.getElementById('secRegras')?.contains(doc1.getElementById('cfgCapacidadeExata')));
@@ -100,6 +100,31 @@ console.log('\n[1] planner.html — primeira abertura (sem dados salvos)');
     doc1.getElementById('secCalendario')?.contains(doc1.getElementById('feriadosList')));
   check('campo Ano duplicado eliminado (cfgAno agora é hidden)',
     doc1.getElementById('cfgAno')?.type === 'hidden');
+
+  // ── Nova organização (fatia 1): sub-abas do Planejamento + aba Administração ──
+  check('sub-navegação do Planejamento existe', !!doc1.getElementById('subBtnRegras') && !!doc1.getElementById('subBtnGerar'));
+  check('4 sub-painéis presentes', ['subRegras','subCalendario','subMunicipios','subGerar'].every(id => !!doc1.getElementById(id)));
+  check('Regras/Calendário/Municípios agora vivem dentro do Planejamento (tab1)',
+    doc1.getElementById('tab1').contains(doc1.getElementById('secRegras')) &&
+    doc1.getElementById('tab1').contains(doc1.getElementById('secCalendario')) &&
+    doc1.getElementById('tab1').contains(doc1.getElementById('municipiosList')));
+  check('aba Municípios do topo foi removida (virou sub-aba)', !doc1.getElementById('tab2') && !doc1.getElementById('tabBtn2'));
+  check('aba Administração (tab6) criada', !!doc1.getElementById('tab6') && !!doc1.getElementById('tabBtn6'));
+  check('Planos por Ano e Backup moveram para Administração',
+    doc1.getElementById('tab6').contains(doc1.getElementById('secPlanos')) &&
+    doc1.getElementById('tab6').contains(doc1.getElementById('backupInfo')));
+
+  // trocarSubPlan alterna os painéis
+  window.eval("trocarSubPlan('Regras')");
+  check('trocarSubPlan mostra Regras e esconde Gerar',
+    doc1.getElementById('subRegras').style.display !== 'none' && doc1.getElementById('subGerar').style.display === 'none');
+  window.eval("trocarSubPlan('Gerar')");
+  check('trocarSubPlan volta para Gerar', doc1.getElementById('subGerar').style.display !== 'none');
+
+  // ano global governa o contexto: trocar recarrega e re-seleciona
+  window.eval('irParaAno(2028)');
+  check('ano global troca o contexto (cfgAno=2028)', doc1.getElementById('cfgAno').value === '2028');
+  check('seletor global reflete o novo ano', doc1.getElementById('anoGlobalSel').value === '2028');
 }
 
 /* ════════ TESTE 2 — planner.html: persistência da config ════════ */
@@ -111,7 +136,7 @@ console.log('\n[2] planner.html — persistência (config salva reaparece)');
   check('ano salvo carregado (2027)', window.document.getElementById('cfgAno').value === '2027');
   check('capacidade salva (60)', window.document.getElementById('cfgCapacidadeExata').value === '60');
   check('entrega mín salva (5)', window.document.getElementById('cfgEntregaMin').value === '5');
-  check('campo de ano reflete 2027', window.document.getElementById('anoInput').value === '2027');
+  check('seletor global de ano reflete 2027', window.document.getElementById('anoGlobalSel').value === '2027');
 }
 
 /* ════════ TESTE 3 — planner.html: gerar plano + filtros ════════ */

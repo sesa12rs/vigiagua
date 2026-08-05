@@ -838,3 +838,70 @@ table.data-table td input:focus {
 .cons-table th { background: var(--slate-50); color: var(--slate-600); font-weight: 600; position: sticky; top: 0; white-space: nowrap; }
 .cons-table th:nth-child(n+8):nth-child(-n+11), .cons-table td:nth-child(n+8):nth-child(-n+11) { text-align: center; }
 .cons-table tbody tr:hover { background: var(--blue-50); }
+
+/* ── Faixa de ano GLOBAL (topo, governa todas as abas) ── */
+.ano-global {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 10px 24px;
+}
+.ano-global__bar {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ano-global__label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--slate-700);
+  font-size: 14px;
+}
+.ano-global__bar select {
+  padding: 7px 12px;
+  border: 1px solid var(--slate-300);
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--slate-800);
+  background: #fff;
+  min-width: 110px;
+}
+.ano-global__bar input[type="number"] {
+  padding: 7px 10px;
+  border: 1px dashed var(--slate-300);
+  border-radius: 8px;
+  font-size: 14px;
+  width: 110px;
+}
+
+/* ── Sub-navegação da aba Planejamento ── */
+.subplan-nav {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: 20px;
+}
+.subplan-tab {
+  border: none;
+  background: transparent;
+  padding: 10px 18px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--slate-500);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: color .15s, border-color .15s;
+}
+.subplan-tab:hover { color: var(--color-primary); }
+.subplan-tab.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+.subplan-panel { animation: fadeIn .15s ease; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

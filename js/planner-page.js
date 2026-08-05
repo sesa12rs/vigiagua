@@ -50,25 +50,26 @@ if (DB.Sync.habilitado()) { DB.Sync.ready.then(init); } else { init(); }
    TABS
    ════════════════════════════════════════════ */
 function trocarTab(n) {
-  document.getElementById('tab1').style.display = n === 1 ? 'block' : 'none';
-  document.getElementById('tab2').style.display = n === 2 ? 'block' : 'none';
-  const t3 = document.getElementById('tab3');
-  if (t3) t3.style.display = n === 3 ? 'block' : 'none';
-  const t4 = document.getElementById('tab4');
-  if (t4) t4.style.display = n === 4 ? 'block' : 'none';
-  const t5 = document.getElementById('tab5');
-  if (t5) t5.style.display = n === 5 ? 'block' : 'none';
-  document.getElementById('tabBtn1').classList.toggle('active', n === 1);
-  document.getElementById('tabBtn2').classList.toggle('active', n === 2);
-  const b3 = document.getElementById('tabBtn3');
-  if (b3) b3.classList.toggle('active', n === 3);
-  const b4 = document.getElementById('tabBtn4');
-  if (b4) b4.classList.toggle('active', n === 4);
-  const b5 = document.getElementById('tabBtn5');
-  if (b5) b5.classList.toggle('active', n === 5);
+  [1, 3, 4, 5, 6].forEach(i => {
+    const t = document.getElementById('tab' + i);
+    if (t) t.style.display = (n === i) ? 'block' : 'none';
+    const b = document.getElementById('tabBtn' + i);
+    if (b) b.classList.toggle('active', n === i);
+  });
   if (n === 3) renderAcompanhamento();
   if (n === 4) renderLaboratorio();
   if (n === 5) renderConsolidado();
+  if (n === 6) { renderPainelPlanos(); _backupInfo(); }
+}
+
+/* ── Sub-navegação da aba Planejamento ── */
+function trocarSubPlan(nome) {
+  ['Regras', 'Calendario', 'Municipios', 'Gerar'].forEach(k => {
+    const p = document.getElementById('sub' + k);
+    if (p) p.style.display = (k === nome) ? 'block' : 'none';
+    const b = document.getElementById('subBtn' + k);
+    if (b) b.classList.toggle('active', k === nome);
+  });
 }
 
 /* ════════════════════════════════════════════
@@ -713,7 +714,8 @@ function renderResumos() {
   if (hintFer) hintFer.textContent = feriadosTxt;
 
   // Municípios badge (outra aba)
-  document.getElementById('badgeMunicipios').textContent = municipios.length;
+  const _bm = document.getElementById('badgeMunicipios');
+  if (_bm) _bm.textContent = municipios.length;
 
   // Texto azul interno (infoMunAlvo)
   updateInfoMunAlvo();
@@ -847,8 +849,29 @@ function atualizarAnoContexto() {
 
 /* ── Campo de ano (barra de contexto) ───────── */
 function sincronizarAnoInput() {
+  const ano = parseInt(document.getElementById('cfgAno').value) || new Date().getFullYear();
   const inp = document.getElementById('anoInput');
-  if (inp) inp.value = parseInt(document.getElementById('cfgAno').value) || new Date().getFullYear();
+  if (inp) inp.value = '';   // campo "novo ano" fica vazio; o ano atual mora no seletor
+  renderAnoGlobal(ano);
+}
+
+/* ── Seletor de ano GLOBAL (topo) — governa todas as abas ── */
+function renderAnoGlobal(anoAtual) {
+  const sel = document.getElementById('anoGlobalSel');
+  if (!sel) return;
+  const ano = anoAtual || parseInt(document.getElementById('cfgAno').value) || new Date().getFullYear();
+  let anos = [];
+  try { anos = (DB.Plano.anos && DB.Plano.anos()) || []; } catch (e) { anos = []; }
+  anos = [...new Set([...anos, ano].map(Number))].sort((a, b) => a - b);
+  const pub = a => { try { return DB.Plano.anosPublicados().includes(a); } catch (e) { return false; } };
+  sel.innerHTML = anos.map(a =>
+    `<option value="${a}"${a === ano ? ' selected' : ''}>${a}${pub(a) ? ' ✓' : ''}</option>`
+  ).join('');
+}
+
+function onAnoGlobal(v) {
+  const ano = parseInt(v, 10);
+  if (ano) irParaAno(ano);
 }
 
 /**

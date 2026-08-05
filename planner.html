@@ -533,14 +533,23 @@
 </header>
 
 <!-- ══ TABS PRINCIPAIS ══════════════════════════ -->
+<div class="ano-global">
+  <div id="backupReminder" style="display:none;"></div>
+  <div class="ano-global__bar">
+    <span class="ano-global__label">📅 Ano do planejamento</span>
+    <select id="anoGlobalSel" onchange="onAnoGlobal(this.value)" aria-label="Selecionar ano"></select>
+    <input type="number" id="anoInput" min="1900" max="9999" inputmode="numeric" placeholder="novo ano…"
+           title="Digite um ano ainda não planejado e tecle Enter"
+           onchange="irParaAno(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+    <span id="statusPlanoTopo"></span>
+  </div>
+  <input type="hidden" id="cfgAno">
+</div>
+
 <div class="main-tabs">
   <button class="main-tab active" id="tabBtn1" onclick="trocarTab(1)">
     ⚙️ Planejamento
     <span class="tab-badge" id="badgePlanejamento">2026</span>
-  </button>
-  <button class="main-tab" id="tabBtn2" onclick="trocarTab(2)">
-    🏘️ Municípios
-    <span class="tab-badge" id="badgeMunicipios">21</span>
   </button>
   <button class="main-tab" id="tabBtn3" onclick="trocarTab(3)">
     📊 Acompanhamento
@@ -554,6 +563,9 @@
     📋 Consolidado
     <span class="tab-badge" id="badgeConsolidado">—</span>
   </button>
+  <button class="main-tab" id="tabBtn6" onclick="trocarTab(6)">
+    🗂️ Administração
+  </button>
 </div>
 
 <!-- ══ CONTEÚDO ═════════════════════════════════ -->
@@ -564,59 +576,14 @@
        ════════════════════════════════════════════ -->
   <div id="tab1" class="planner-layout">
 
-    <div id="backupReminder" style="display:none;"></div>
+    <nav class="subplan-nav" aria-label="Etapas do planejamento">
+      <button id="subBtnRegras"     class="subplan-tab" onclick="trocarSubPlan('Regras')">📐 Regras</button>
+      <button id="subBtnCalendario" class="subplan-tab" onclick="trocarSubPlan('Calendario')">🗓️ Calendário</button>
+      <button id="subBtnMunicipios" class="subplan-tab" onclick="trocarSubPlan('Municipios')">🏘️ Municípios</button>
+      <button id="subBtnGerar"      class="subplan-tab active" onclick="trocarSubPlan('Gerar')">🚀 Gerar plano</button>
+    </nav>
 
-    <!-- ════════════════════════════════════════════
-         BARRA DE CONTEXTO — Ano + ações (governa toda a aba)
-         ════════════════════════════════════════════ -->
-    <div class="ano-bar">
-      <div class="ano-bar__ano">
-        <label for="anoInput">Ano em planejamento</label>
-        <div class="ano-bar__controls">
-          <input type="number" id="anoInput" min="1900" max="9999" inputmode="numeric"
-                 onchange="irParaAno(this.value)"
-                 onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
-        </div>
-        <span class="ano-bar__hint">Digite o ano e tecle Enter. Anos já planejados aparecem na tabela abaixo; trocar o ano recarrega semanas e feriados.</span>
-      </div>
-      <div class="ano-bar__acoes">
-        <div id="statusPlanoTopo"></div>
-        <button class="btn btn--secondary" onclick="salvarConfig()">💾 Salvar</button>
-        <button class="btn btn--primary btn--lg" onclick="gerarPlano()">🚀 Gerar Plano</button>
-      </div>
-    </div>
-
-    <!-- Ano em edição — fonte única de verdade (sincronizado com o seletor acima) -->
-    <input type="hidden" id="cfgAno">
-
-    <!-- ════════════════════════════════════════════
-         GRUPO A — PLANOS POR ANO (ciclo de vida + publicação)
-         ════════════════════════════════════════════ -->
-    <div class="secao aberta" id="secPlanos">
-      <div class="secao__header" onclick="toggleSecao('secPlanos')">
-        <span class="secao__icone">🗂️</span>
-        <div class="secao__titulo">Planos por Ano</div>
-        <div class="secao__status">
-          <span class="secao__resumo" id="resumoPlanos">—</span>
-        </div>
-        <span class="secao__chevron">▼</span>
-      </div>
-      <div class="secao__corpo">
-
-        <!-- Contexto do ano em edição -->
-        <div id="anoContexto" style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--slate-700);line-height:1.5;"></div>
-
-        <!-- Lista de planos (prazo de edição é editável por linha) -->
-        <div id="painelPlanos"></div>
-
-      </div>
-    </div>
-
-    <!-- marcador removido (cfgAno agora fica no topo) -->
-
-    <!-- ════════════════════════════════════════════
-         GRUPO B — REGRAS DE DISTRIBUIÇÃO
-         ════════════════════════════════════════════ -->
+    <div id="subRegras" class="subplan-panel" style="display:none;">
     <div class="secao aberta" id="secRegras">
       <div class="secao__header" onclick="toggleSecao('secRegras')">
         <span class="secao__icone">⚙️</span>
@@ -782,10 +749,9 @@
 
       </div>
     </div>
+    </div>
 
-    <!-- ════════════════════════════════════════════
-         GRUPO C — CALENDÁRIO DO ANO (semanas + feriados)
-         ════════════════════════════════════════════ -->
+    <div id="subCalendario" class="subplan-panel" style="display:none;">
     <div class="secao" id="secCalendario">
       <div class="secao__header" onclick="toggleSecao('secCalendario')">
         <span class="secao__icone">🗓️</span>
@@ -864,51 +830,9 @@
 
       </div>
     </div>
-
-    <!-- (Barra Gerar movida para o topo — ver .ano-bar) -->
-
-    <!-- RESULTADO (aparece aqui após gerar) -->
-    <div id="secaoResultado">
-    <div class="resultado-header" id="resultadoHeader">
-      <div>
-        <h2 id="resultadoTitulo">Plano Gerado</h2>
-        <p id="resultadoSub">—</p>
-      </div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;" id="resultadoAcoes"></div>
-    </div>
-      <div class="resultado-corpo">
-        <div id="validacaoBox"></div>
-        <div id="resultadosContent"></div>
-        <div id="detalhesContent" style="margin-top:24px;"></div>
-      </div>
     </div>
 
-    <!-- ════════════════════════════════════════════
-         BACKUP E SEGURANÇA DOS DADOS (Regional)
-         ════════════════════════════════════════════ -->
-    <div class="card" style="margin-top:16px;border:1px solid var(--slate-200);">
-      <h2 style="margin:0 0 4px;font-family:var(--font-display);font-size:17px;color:var(--slate-800);">🛟 Backup e segurança dos dados</h2>
-      <p style="margin:0 0 14px;color:var(--slate-500);font-size:13px;">
-        Baixe uma cópia completa de todos os dados oficiais (planos, configurações e os planos preenchidos pelos municípios).
-        Guarde o arquivo em local seguro. Recomendado: <strong>uma vez por semana</strong>.
-      </p>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
-        <button class="btn btn--primary btn--sm" onclick="exportarBackup()">💾 Exportar backup agora</button>
-        <button class="btn btn--secondary btn--sm" onclick="document.getElementById('backupFile').click()">♻️ Restaurar de um arquivo</button>
-        <input type="file" id="backupFile" accept="application/json,.json" style="display:none;" onchange="restaurarBackup(this.files[0]); this.value='';">
-        <span id="backupInfo" style="font-size:12.5px;color:var(--slate-500);"></span>
-      </div>
-      <p style="margin:12px 0 0;color:var(--slate-400);font-size:11.5px;">
-        A restauração repõe as chaves do arquivo (não apaga o que foi criado depois do backup). Para agendamento automático, veja também os backups no painel do Supabase (documentado em <code>supabase/README-fase2.md</code>).
-      </p>
-    </div>
-
-  </div><!-- /tab1 -->
-
-  <!-- ════════════════════════════════════════════
-       TAB 2 — MUNICÍPIOS
-       ════════════════════════════════════════════ -->
-  <div id="tab2" style="display:none;max-width:960px;margin:0 auto;">
+    <div id="subMunicipios" class="subplan-panel" style="display:none;">
 
     <div class="section-header">
       <h2 class="section-header__title">🏘️ Metas e Regras por Município</h2>
@@ -931,7 +855,35 @@
     <div class="card">
       <div id="municipiosList"></div>
     </div>
-  </div><!-- /tab2 -->
+    </div>
+
+    <div id="subGerar" class="subplan-panel">
+      <div class="card" style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn--secondary" onclick="salvarConfig()">💾 Salvar configuração</button>
+        <button class="btn btn--primary btn--lg" onclick="gerarPlano()">🚀 Gerar Plano</button>
+        <span style="font-size:12.5px;color:var(--slate-500);">Salva as regras e gera o plano do ano selecionado no topo.</span>
+      </div>
+    <div id="secaoResultado">
+    <div class="resultado-header" id="resultadoHeader">
+      <div>
+        <h2 id="resultadoTitulo">Plano Gerado</h2>
+        <p id="resultadoSub">—</p>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;" id="resultadoAcoes"></div>
+    </div>
+      <div class="resultado-corpo">
+        <div id="validacaoBox"></div>
+        <div id="resultadosContent"></div>
+        <div id="detalhesContent" style="margin-top:24px;"></div>
+      </div>
+    </div>
+    </div>
+
+  </div><!-- /tab1 -->
+
+  <!-- ════════════════════════════════════════════
+       TAB 2 — MUNICÍPIOS
+       ════════════════════════════════════════════ -->
 
   <!-- ════════════════════════════════════════════
        TAB 3 — ACOMPANHAMENTO DOS MUNICÍPIOS
@@ -945,8 +897,6 @@
           <p style="margin:4px 0 0;color:var(--slate-500);font-size:13px;">Quem já preencheu, quem concluiu e quem ainda falta — no ano selecionado.</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
-          <label style="font-size:13px;color:var(--slate-600);font-weight:600;">Ano</label>
-          <input type="number" id="acompAnoInput" style="width:96px;padding:7px 10px;border:1px solid var(--slate-300);border-radius:8px;font-size:14px;" onchange="acompTrocarAno(this.value)">
           <button class="btn btn--secondary btn--sm" id="btnAcompAtualizar" onclick="acompAtualizar()">🔄 Atualizar</button>
         </div>
       </div>
@@ -984,8 +934,6 @@
           <p style="margin:4px 0 0;color:var(--slate-500);font-size:13px;">Carga por semana, distribuição do ano e o romaneio de cada viagem para o laboratório.</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <label style="font-size:13px;color:var(--slate-600);font-weight:600;">Ano</label>
-          <input type="number" id="labAnoInput" style="width:96px;padding:7px 10px;border:1px solid var(--slate-300);border-radius:8px;font-size:14px;" onchange="labTrocarAno(this.value)">
           <button class="btn btn--secondary btn--sm" onclick="baixarCsvResumoSemanal()">📥 CSV resumo semanal</button>
           <button class="btn btn--primary btn--sm" onclick="imprimirRomaneio()">🖨️ Imprimir romaneio</button>
         </div>
@@ -1027,8 +975,6 @@
           <p style="margin:4px 0 0;color:var(--slate-500);font-size:13px;">Todas as coletas preenchidas pelos municípios (normais, filhas "-CR" e extras), num lugar só.</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <label style="font-size:13px;color:var(--slate-600);font-weight:600;">Ano</label>
-          <input type="number" id="consAnoInput" style="width:96px;padding:7px 10px;border:1px solid var(--slate-300);border-radius:8px;font-size:14px;" onchange="consTrocarAno(this.value)">
           <button class="btn btn--secondary btn--sm" onclick="baixarCsvConsolidado()">📥 Exportar CSV</button>
         </div>
       </div>
@@ -1066,6 +1012,47 @@
     </div>
 
   </div><!-- /tab5 -->
+
+  <!-- ════════════════════════════════════════════
+       TAB 6 — ADMINISTRAÇÃO (planos por ano + backup)
+       ════════════════════════════════════════════ -->
+  <div id="tab6" style="display:none;max-width:960px;margin:0 auto;">
+    <div class="secao aberta" id="secPlanos">
+      <div class="secao__header" onclick="toggleSecao('secPlanos')">
+        <span class="secao__icone">🗂️</span>
+        <div class="secao__titulo">Planos por Ano</div>
+        <div class="secao__status">
+          <span class="secao__resumo" id="resumoPlanos">—</span>
+        </div>
+        <span class="secao__chevron">▼</span>
+      </div>
+      <div class="secao__corpo">
+
+        <!-- Contexto do ano em edição -->
+        <div id="anoContexto" style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--slate-700);line-height:1.5;"></div>
+
+        <!-- Lista de planos (prazo de edição é editável por linha) -->
+        <div id="painelPlanos"></div>
+
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;border:1px solid var(--slate-200);">
+      <h2 style="margin:0 0 4px;font-family:var(--font-display);font-size:17px;color:var(--slate-800);">🛟 Backup e segurança dos dados</h2>
+      <p style="margin:0 0 14px;color:var(--slate-500);font-size:13px;">
+        Baixe uma cópia completa de todos os dados oficiais (planos, configurações e os planos preenchidos pelos municípios).
+        Guarde o arquivo em local seguro. Recomendado: <strong>uma vez por semana</strong>.
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+        <button class="btn btn--primary btn--sm" onclick="exportarBackup()">💾 Exportar backup agora</button>
+        <button class="btn btn--secondary btn--sm" onclick="document.getElementById('backupFile').click()">♻️ Restaurar de um arquivo</button>
+        <input type="file" id="backupFile" accept="application/json,.json" style="display:none;" onchange="restaurarBackup(this.files[0]); this.value='';">
+        <span id="backupInfo" style="font-size:12.5px;color:var(--slate-500);"></span>
+      </div>
+      <p style="margin:12px 0 0;color:var(--slate-400);font-size:11.5px;">
+        A restauração repõe as chaves do arquivo (não apaga o que foi criado depois do backup). Para agendamento automático, veja também os backups no painel do Supabase (documentado em <code>supabase/README-fase2.md</code>).
+      </p>
+    </div>
+  </div><!-- /tab6 -->
 
 </main>
 
