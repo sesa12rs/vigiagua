@@ -537,10 +537,17 @@
   <div id="backupReminder" style="display:none;"></div>
   <div class="ano-global__bar">
     <span class="ano-global__label">📅 Ano do planejamento</span>
-    <select id="anoGlobalSel" onchange="onAnoGlobal(this.value)" aria-label="Selecionar ano"></select>
-    <input type="number" id="anoInput" min="1900" max="9999" inputmode="numeric" placeholder="novo ano…"
-           title="Digite um ano ainda não planejado e tecle Enter"
-           onchange="irParaAno(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
+    <div class="yearpick" id="yearpick">
+      <button type="button" class="yearpick__display" id="yearpickDisplay" onclick="toggleYearpick()" aria-haspopup="listbox" aria-expanded="false">
+        <span id="yearpickAtual">—</span>
+        <span class="yearpick__chevron">▾</span>
+      </button>
+      <div class="yearpick__pop" id="yearpickPop" style="display:none;">
+        <input type="number" id="yearpickInput" class="yearpick__input" placeholder="digite um ano e tecle Enter…" inputmode="numeric"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();yearpickDigitar(this.value);}">
+        <div class="yearpick__wheel" id="yearpickWheel" role="listbox" aria-label="Ano do planejamento"></div>
+      </div>
+    </div>
     <span id="statusPlanoTopo"></span>
   </div>
   <input type="hidden" id="cfgAno">

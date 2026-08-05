@@ -37,6 +37,9 @@ function init() {
   renderConsolidado();
   atualizarAnoContexto();
   _backupInfo();
+  document.addEventListener('click', e => {
+    if (_yearpickAberto && !e.target.closest('#yearpick')) fecharYearpick();
+  });
 
   // Carrega o plano do ANO atualmente no formulário (não "o mais recente"),
   // mantendo formulário e resultado sempre coerentes.
@@ -849,29 +852,78 @@ function atualizarAnoContexto() {
 
 /* ── Campo de ano (barra de contexto) ───────── */
 function sincronizarAnoInput() {
-  const ano = parseInt(document.getElementById('cfgAno').value) || new Date().getFullYear();
-  const inp = document.getElementById('anoInput');
-  if (inp) inp.value = '';   // campo "novo ano" fica vazio; o ano atual mora no seletor
-  renderAnoGlobal(ano);
+  renderAnoGlobal(parseInt(document.getElementById('cfgAno').value) || new Date().getFullYear());
 }
 
-/* ── Seletor de ano GLOBAL (topo) — governa todas as abas ── */
+/* ── Seletor de ano GLOBAL (roleta) — governa todas as abas ──
+   Fonte de verdade continua o hidden #cfgAno; aplicar = irParaAno(). */
+var _yearpickAberto = false;
+
+function _anoPublicado(a) {
+  try { return DB.Plano.anosPublicados().includes(a); } catch (e) { return false; }
+}
+
+// Faixa: do mais antigo com plano (ou 2 anos atrás do atual, o que for menor) até +5.
+function _anoFaixa(anoAtual) {
+  let comPlano = [];
+  try { comPlano = (DB.Plano.anos && DB.Plano.anos()) || []; } catch (e) { comPlano = []; }
+  const min = Math.min(anoAtual - 2, ...(comPlano.length ? comPlano : [anoAtual]));
+  const max = anoAtual + 5;
+  return { min, max };
+}
+
 function renderAnoGlobal(anoAtual) {
-  const sel = document.getElementById('anoGlobalSel');
-  if (!sel) return;
   const ano = anoAtual || parseInt(document.getElementById('cfgAno').value) || new Date().getFullYear();
-  let anos = [];
-  try { anos = (DB.Plano.anos && DB.Plano.anos()) || []; } catch (e) { anos = []; }
-  anos = [...new Set([...anos, ano].map(Number))].sort((a, b) => a - b);
-  const pub = a => { try { return DB.Plano.anosPublicados().includes(a); } catch (e) { return false; } };
-  sel.innerHTML = anos.map(a =>
-    `<option value="${a}"${a === ano ? ' selected' : ''}>${a}${pub(a) ? ' ✓' : ''}</option>`
-  ).join('');
+  const disp = document.getElementById('yearpickAtual');
+  if (disp) disp.innerHTML = `${ano}${_anoPublicado(ano) ? ' <span style="color:var(--green-600);">✓</span>' : ''}`;
+  // Só reconstrói a lista quando fechada (evita perder a rolagem enquanto aberta).
+  if (!_yearpickAberto) _montarRoletaAnos(ano);
 }
 
-function onAnoGlobal(v) {
-  const ano = parseInt(v, 10);
-  if (ano) irParaAno(ano);
+function _montarRoletaAnos(ano) {
+  const wheel = document.getElementById('yearpickWheel');
+  if (!wheel) return;
+  const { min, max } = _anoFaixa(ano);
+  let html = '';
+  for (let a = max; a >= min; a--) {   // mais recentes no topo
+    const sel = a === ano;
+    const pub = _anoPublicado(a);
+    html += `<div class="yearpick__year${sel ? ' yearpick__year--sel' : ''}" role="option" aria-selected="${sel}" onclick="yearpickEscolher(${a})">`
+      + `${a}${pub ? ' <span class="yearpick__check">✓</span>' : ''}</div>`;
+  }
+  wheel.innerHTML = html;
+}
+
+function toggleYearpick(forcar) {
+  const pop = document.getElementById('yearpickPop');
+  const disp = document.getElementById('yearpickDisplay');
+  if (!pop) return;
+  const abrir = (forcar === undefined) ? (pop.style.display === 'none') : forcar;
+  _yearpickAberto = abrir;
+  pop.style.display = abrir ? 'block' : 'none';
+  if (disp) disp.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+  if (abrir) {
+    const ano = parseInt(document.getElementById('cfgAno').value) || new Date().getFullYear();
+    _montarRoletaAnos(ano);
+    const inp = document.getElementById('yearpickInput');
+    if (inp) inp.value = '';
+    const sel = document.querySelector('#yearpickWheel .yearpick__year--sel');
+    if (sel && sel.scrollIntoView) sel.scrollIntoView({ block: 'center' });
+  }
+}
+
+function fecharYearpick() { toggleYearpick(false); }
+
+function yearpickEscolher(a) {
+  toggleYearpick(false);
+  irParaAno(a);
+}
+
+function yearpickDigitar(v) {
+  const a = parseInt(v, 10);
+  if (!a || a < 1900 || a > 9999) { mostrarToast('Digite um ano válido (1900–9999).'); return; }
+  toggleYearpick(false);
+  irParaAno(a);
 }
 
 /**

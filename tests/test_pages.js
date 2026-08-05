@@ -91,7 +91,7 @@ console.log('\n[1] planner.html — primeira abertura (sem dados salvos)');
   check('seções antigas removidas (secAno/secParams/secSemanas/secFeriados)',
     !doc1.getElementById('secAno') && !doc1.getElementById('secParams') &&
     !doc1.getElementById('secSemanas') && !doc1.getElementById('secFeriados'));
-  check('seletor de ano GLOBAL fica no topo (governa todas as abas)', !!doc1.getElementById('anoGlobalSel') && !!doc1.getElementById('anoInput'));
+  check('seletor de ano GLOBAL (roleta) fica no topo', !!doc1.getElementById('yearpickDisplay') && !!doc1.getElementById('yearpickWheel') && !!doc1.getElementById('yearpickInput'));
   check('campo global de prazo removido', !doc1.getElementById('cfgPrazoEdicao'));
   check('capacidade mora dentro de Regras de Distribuição',
     doc1.getElementById('secRegras')?.contains(doc1.getElementById('cfgCapacidadeExata')));
@@ -124,7 +124,21 @@ console.log('\n[1] planner.html — primeira abertura (sem dados salvos)');
   // ano global governa o contexto: trocar recarrega e re-seleciona
   window.eval('irParaAno(2028)');
   check('ano global troca o contexto (cfgAno=2028)', doc1.getElementById('cfgAno').value === '2028');
-  check('seletor global reflete o novo ano', doc1.getElementById('anoGlobalSel').value === '2028');
+  check('roleta reflete o novo ano (2028)', /2028/.test(doc1.getElementById('yearpickAtual').textContent));
+
+  // ── Roleta de ano: abrir, faixa, escolher, digitar ──
+  window.eval('toggleYearpick(true)');
+  check('roleta abre ao clicar', doc1.getElementById('yearpickPop').style.display !== 'none');
+  {
+    const anos = [...doc1.querySelectorAll('#yearpickWheel .yearpick__year')].map(e => parseInt(e.textContent));
+    check('faixa vai de 2 anos atrás até +5 (2026..2033)', Math.min(...anos) === 2026 && Math.max(...anos) === 2033, `min=${Math.min(...anos)} max=${Math.max(...anos)}`);
+    check('ano atual (2028) destacado', /2028/.test(doc1.querySelector('#yearpickWheel .yearpick__year--sel').textContent));
+  }
+  window.eval('yearpickEscolher(2030)');
+  check('escolher na roleta aplica o ano', doc1.getElementById('cfgAno').value === '2030');
+  check('roleta fecha após escolher', doc1.getElementById('yearpickPop').style.display === 'none');
+  window.eval('toggleYearpick(true); yearpickDigitar("2031")');
+  check('digitar um ano aplica', doc1.getElementById('cfgAno').value === '2031');
 }
 
 /* ════════ TESTE 2 — planner.html: persistência da config ════════ */
@@ -136,7 +150,7 @@ console.log('\n[2] planner.html — persistência (config salva reaparece)');
   check('ano salvo carregado (2027)', window.document.getElementById('cfgAno').value === '2027');
   check('capacidade salva (60)', window.document.getElementById('cfgCapacidadeExata').value === '60');
   check('entrega mín salva (5)', window.document.getElementById('cfgEntregaMin').value === '5');
-  check('seletor global de ano reflete 2027', window.document.getElementById('anoGlobalSel').value === '2027');
+  check('roleta reflete o ano 2027', /2027/.test(window.document.getElementById('yearpickAtual').textContent));
 }
 
 /* ════════ TESTE 3 — planner.html: gerar plano + filtros ════════ */

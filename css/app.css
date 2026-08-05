@@ -859,23 +859,6 @@ table.data-table td input:focus {
   color: var(--slate-700);
   font-size: 14px;
 }
-.ano-global__bar select {
-  padding: 7px 12px;
-  border: 1px solid var(--slate-300);
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--slate-800);
-  background: #fff;
-  min-width: 110px;
-}
-.ano-global__bar input[type="number"] {
-  padding: 7px 10px;
-  border: 1px dashed var(--slate-300);
-  border-radius: 8px;
-  font-size: 14px;
-  width: 110px;
-}
 
 /* ── Sub-navegação da aba Planejamento ── */
 .subplan-nav {
@@ -905,3 +888,38 @@ table.data-table td input:focus {
 }
 .subplan-panel { animation: fadeIn .15s ease; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── Seletor de ano estilo "roleta" ── */
+.yearpick { position: relative; }
+.yearpick__display {
+  display: flex; align-items: center; gap: 8px;
+  background: #fff; border: 1px solid var(--slate-300); border-radius: 10px;
+  padding: 5px 14px; cursor: pointer;
+  font-family: var(--font-display); font-size: 22px; font-weight: 800; color: var(--slate-800);
+  transition: border-color .15s;
+}
+.yearpick__display:hover { border-color: var(--color-primary); }
+.yearpick__chevron { font-size: 12px; color: var(--slate-400); }
+.yearpick__pop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 200;
+  background: #fff; border: 1px solid var(--slate-200); border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.18); padding: 10px; width: 210px;
+}
+.yearpick__input {
+  width: 100%; box-sizing: border-box; padding: 8px 10px;
+  border: 1px solid var(--slate-300); border-radius: 8px; font-size: 14px; margin-bottom: 8px;
+}
+.yearpick__wheel {
+  height: 210px; overflow-y: auto; scroll-snap-type: y mandatory; padding: 85px 0;
+  -webkit-mask-image: linear-gradient(transparent, #000 28%, #000 72%, transparent);
+          mask-image: linear-gradient(transparent, #000 28%, #000 72%, transparent);
+  scrollbar-width: none;
+}
+.yearpick__wheel::-webkit-scrollbar { display: none; }
+.yearpick__year {
+  scroll-snap-align: center; text-align: center; padding: 6px 0; border-radius: 8px;
+  font-size: 16px; color: var(--slate-400); cursor: pointer; transition: color .1s, background .1s;
+}
+.yearpick__year:hover { color: var(--color-primary); background: var(--slate-50); }
+.yearpick__year--sel { font-size: 23px; font-weight: 800; color: var(--slate-900); }
+.yearpick__check { color: var(--green-600); }
