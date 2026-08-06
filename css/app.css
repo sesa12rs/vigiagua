@@ -813,10 +813,20 @@ table.data-table td input:focus {
   .form-grid--2, .form-grid--3 { grid-template-columns: 1fr; }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
   .topbar__title { display: none; }
-  .tabnav__tab { padding: 12px 14px; font-size: 12.5px; }
   .card { padding: 16px; }
   .modal { max-width: 100%; margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 85vh; }
   .modal-overlay { align-items: flex-end; padding: 0; }
+  /* sub-navegação do Planejamento: rola em vez de quebrar linha */
+  .subplan-nav { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .subplan-nav::-webkit-scrollbar { display: none; }
+  .subplan-tab { flex: 0 0 auto; white-space: nowrap; min-height: 44px; }
+  /* faixa de ano e roleta */
+  .ano-global { padding: 8px 12px; }
+  .ano-global__bar { gap: 8px; }
+  .yearpick__pop { width: min(210px, 80vw); }
+  /* alvos de toque */
+  .btn { min-height: 40px; }
+  .btn--sm { min-height: 34px; }
 }
 
 @media (max-width: 480px) {
