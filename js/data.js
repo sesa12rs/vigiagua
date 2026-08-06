@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v50';
+  window.VIGIAGUA_VERSAO = 'fase2-v51';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -29,6 +29,11 @@ const DB = (() => {
   function set(key, val) {
     localStorage.setItem(key, JSON.stringify(val));
     if (_syncRef) _syncRef.notify(key);
+  }
+  /** Apaga uma chave do cache E sincroniza a remoção (deleta a linha no Supabase). */
+  function del(key) {
+    localStorage.removeItem(key);
+    if (_syncRef) _syncRef.pushAgora(key);
   }
 
   /* ══════════════════════════════════════════════
@@ -337,12 +342,63 @@ const DB = (() => {
 
     /** Exclui completamente o plano de um ano (rascunho ou publicado). */
     excluir(ano) {
-      const chave = `va_plano_${ano}`;
-      localStorage.removeItem(chave);
-      // Avisa o Supabase para DELETAR a linha (valor local null → _push faz delete).
-      // Sem isto, o plano voltava no próximo pull ("rascunho ressuscitava").
-      if (_syncRef) _syncRef.pushAgora(chave);
+      // Cascata: remove TUDO que pertence ao ano, cada peça sincronizada.
+      del(`va_plano_${ano}`);
+      del(`va_semanas_${ano}`);
+      this._chavesMunicipaisDoAno(ano).forEach(del);
       this._setIndex(this.anos().filter(a => a !== Number(ano)));
+    },
+
+    /** Chaves municipais (planos preenchidos + prévias) de um ano, presentes no cache. */
+    _chavesMunicipaisDoAno(ano) {
+      const out = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k) continue;
+          if ((k.startsWith('va_munplano_') || k.startsWith('va_previewedit_')) && k.endsWith('_' + ano)) out.push(k);
+        }
+      } catch (e) { /* ambiente sem length/key */ }
+      return out;
+    },
+
+    /** Quantos municípios têm plano preenchido neste ano (para o aviso da exclusão). */
+    municipiosComDados(ano) {
+      let n = 0;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('va_munplano_') && k.endsWith('_' + ano)) n++;
+        }
+      } catch (e) { /* ignora */ }
+      return n;
+    },
+
+    /** Dados de suporte (semanas/munplano/previewedit) cujo ANO não tem plano nenhum. */
+    orfaos() {
+      const comPlano = new Set(this._anosPresentes());
+      const res = { total: 0, semanas: 0, munplano: 0, previewedit: 0, anos: [], chaves: [] };
+      const anosSet = new Set();
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (!k) continue;
+          let m, ano = null, tipo = null;
+          if      ((m = k.match(/^va_semanas_(\d{4})$/)))         { ano = +m[1]; tipo = 'semanas'; }
+          else if ((m = k.match(/^va_munplano_.+_(\d{4})$/)))     { ano = +m[1]; tipo = 'munplano'; }
+          else if ((m = k.match(/^va_previewedit_.+_(\d{4})$/)))  { ano = +m[1]; tipo = 'previewedit'; }
+          if (ano && !comPlano.has(ano)) { res.chaves.push(k); res[tipo]++; res.total++; anosSet.add(ano); }
+        }
+      } catch (e) { /* ignora */ }
+      res.anos = [...anosSet].sort((a, b) => a - b);
+      return res;
+    },
+
+    /** Remove (sincronizando) todos os dados órfãos. Retorna o resumo do que foi limpo. */
+    limparOrfaos() {
+      const o = this.orfaos();
+      o.chaves.forEach(del);
+      return o;
     },
 
     /** Anos com plano REALMENTE presente no cache, mesmo que o índice esteja

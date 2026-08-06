@@ -102,29 +102,54 @@ banco['va_previewedit_Altônia_2027'] = JSON.stringify({ blocos: [] });
   check('export local ignora va_session (não sincronizável)', !('va_session' in expLocal.registros));
   window.supabase = supabaseBackup;
 
-  console.log('\n[Excluir plano sincroniza a deleção remota]');
+  console.log('\n[Excluir plano em CASCATA sincroniza a deleção de tudo]');
   {
-    banco['va_plano_2028'] = JSON.stringify({ cfg: { ano: 2028 }, status: 'rascunho' });
-    localStorage.setItem('va_plano_2028', banco['va_plano_2028']);
+    // Ano 2028: plano + semanas + 2 municípios (munplano + previewedit)
+    const seed = {
+      'va_plano_2028': JSON.stringify({ cfg: { ano: 2028 }, status: 'publicado' }),
+      'va_semanas_2028': JSON.stringify([true, false]),
+      'va_munplano_Altônia_2028': JSON.stringify({ v: 1 }),
+      'va_previewedit_Altônia_2028': JSON.stringify({ b: [] }),
+      'va_munplano_Umuarama_2028': JSON.stringify({ v: 1 }),
+    };
+    Object.entries(seed).forEach(([k, v]) => { banco[k] = v; localStorage.setItem(k, v); });
     localStorage.setItem('va_planos_index', JSON.stringify([2028]));
     deletes.length = 0;
+
+    check('conta 2 municípios com dados no ano', DB.Plano.municipiosComDados(2028) === 2, String(DB.Plano.municipiosComDados(2028)));
     DB.Plano.excluir(2028);
-    await new Promise(r => setTimeout(r, 60));   // espera o _push assíncrono
-    check('removido do cache local', localStorage.getItem('va_plano_2028') === null);
-    check('DELETE enviado ao Supabase para va_plano_2028', deletes.includes('va_plano_2028'), JSON.stringify(deletes));
-    check('linha removida do banco (não ressuscita no pull)', !('va_plano_2028' in banco));
+    await new Promise(r => setTimeout(r, 80));
+
+    const esperadas = Object.keys(seed);
+    check('todas as peças removidas do cache local', esperadas.every(k => localStorage.getItem(k) === null));
+    check('DELETE remoto de plano+semanas+munplano+previewedit', esperadas.every(k => deletes.includes(k)), JSON.stringify(deletes));
+    check('nada do ano 2028 sobrou no banco', !Object.keys(banco).some(k => k.endsWith('_2028') || k === 'va_plano_2028' || k === 'va_semanas_2028'));
     check('índice não contém mais 2028', !JSON.parse(localStorage.getItem('va_planos_index')).includes(2028));
   }
 
-  console.log('\n[Auto-cura: plano órfão aparece no painel para ser excluído]');
+  console.log('\n[Limpeza de dados órfãos]');
   {
-    // órfão: plano no cache, mas fora do índice (situação dos bugs antigos)
-    localStorage.setItem('va_plano_2035', JSON.stringify({ cfg: { ano: 2035 }, status: 'rascunho' }));
+    // Anos SEM plano com peças soltas + 1 ano COM plano (não deve ser tocado)
+    localStorage.setItem('va_plano_2027', JSON.stringify({ cfg: { ano: 2027 }, status: 'publicado' }));
     localStorage.setItem('va_planos_index', JSON.stringify([2027]));
-    const anos = DB.Plano.resumos().map(r => r.ano);
-    check('resumos() enxerga o órfão 2035', anos.includes(2035), JSON.stringify(anos));
-    DB.Plano.excluir(2035);
-    check('após excluir, órfão some de resumos()', !DB.Plano.resumos().map(r => r.ano).includes(2035));
+    localStorage.setItem('va_semanas_2027', JSON.stringify([true]));        // legítimo (2027 tem plano)
+    localStorage.setItem('va_munplano_Altônia_2027', JSON.stringify({ v: 1 })); // legítimo
+    localStorage.setItem('va_semanas_2035', JSON.stringify([true]));        // órfão
+    localStorage.setItem('va_munplano_Altônia_2035', JSON.stringify({ v: 1 })); // órfão
+    localStorage.setItem('va_previewedit_Umuarama_2040', JSON.stringify({ b: [] })); // órfão
+    deletes.length = 0;
+
+    const o = DB.Plano.orfaos();
+    check('detecta 3 órfãos (2 em 2035, 1 em 2040)', o.total === 3, JSON.stringify(o));
+    check('anos órfãos = 2035, 2040', o.anos.join(',') === '2035,2040', o.anos.join(','));
+    check('NÃO marca as peças de 2027 (tem plano)', !o.chaves.some(k => k.endsWith('_2027')));
+
+    DB.Plano.limparOrfaos();
+    await new Promise(r => setTimeout(r, 60));
+    check('órfãos removidos do cache', localStorage.getItem('va_semanas_2035') === null && localStorage.getItem('va_previewedit_Umuarama_2040') === null);
+    check('órfãos deletados no Supabase', deletes.includes('va_semanas_2035') && deletes.includes('va_previewedit_Umuarama_2040'));
+    check('peças de 2027 PRESERVADAS', localStorage.getItem('va_semanas_2027') !== null && localStorage.getItem('va_munplano_Altônia_2027') !== null);
+    check('nada de 2027 foi deletado', !deletes.some(k => k.endsWith('_2027')));
   }
 
   console.log(fail ? `\n\u274c ${fail} falha(s)` : '\n\u2705 Backup/restauração OK');

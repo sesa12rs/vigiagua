@@ -1038,8 +1038,18 @@
         <!-- Contexto do ano em edição -->
         <div id="anoContexto" style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--slate-700);line-height:1.5;"></div>
 
+        <!-- Diferença entre Despublicar e Excluir -->
+        <div style="background:var(--amber-50);border:1px solid var(--amber-200);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:var(--slate-700);line-height:1.6;">
+          <strong>🔒 Despublicar</strong> tira o ano do ar mas <strong>guarda</strong> tudo (o plano e o que os municípios preencheram) — dá para republicar depois.<br>
+          <strong>🗑️ Excluir</strong> apaga o ano <strong>por completo e para sempre</strong>: plano, semanas e os dados municipais daquele ano.
+        </div>
+
         <!-- Lista de planos (prazo de edição é editável por linha) -->
         <div id="painelPlanos"></div>
+
+        <div style="margin-top:14px;text-align:right;">
+          <button class="btn btn--ghost btn--sm" onclick="limparOrfaosUI()" title="Remove dados soltos (semanas, planos municipais, prévias) de anos que não têm mais plano">🧹 Limpar dados órfãos</button>
+        </div>
 
       </div>
     </div>

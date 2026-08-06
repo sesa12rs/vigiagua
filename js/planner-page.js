@@ -1009,20 +1009,48 @@ function despublicarAno(ano) {
 
 function excluirPlano(ano) {
   const plano = DB.Plano.carregar(ano);
-  const aviso = plano?.status === 'publicado'
-    ? `O plano de ${ano} está PUBLICADO. Excluí-lo o remove dos municípios e apaga tudo permanentemente. Continuar?`
-    : `Excluir definitivamente o rascunho de ${ano}? Esta ação não pode ser desfeita.`;
+  const nMun = DB.Plano.municipiosComDados(ano);
+  const publicado = plano?.status === 'publicado';
+
+  let aviso = publicado
+    ? `⚠️ O plano de ${ano} está PUBLICADO.\n\nExcluir apaga TUDO deste ano permanentemente: o plano, as semanas e o que os municípios preencheram.`
+    : `Excluir definitivamente o plano de ${ano}?\n\nApaga o plano e as semanas deste ano.`;
+  if (nMun > 0) aviso += `\n\n🗑️ Também serão apagados os planos preenchidos de ${nMun} município(s) para ${ano}.`;
+  aviso += `\n\n💡 Se você só quer tirar do ar mas GUARDAR o que foi preenchido, feche esta janela e use "🔒 Despublicar" — não Excluir.`;
+  aviso += `\n\nEsta ação NÃO pode ser desfeita. Continuar?`;
   if (!confirm(aviso)) return;
+
   DB.Plano.excluir(ano);
   if (planoAtual && planoAtual.cfg?.ano === ano) {
     planoAtual = null;
-    document.getElementById('secaoResultado').classList.remove('visivel');
+    const sr = document.getElementById('secaoResultado');
+    if (sr) sr.classList.remove('visivel');
   }
   sincronizarAnoInput();
   renderPainelPlanos();
   atualizarAnoContexto();
   renderStatusPlano();
-  mostrarToast(`🗑️ Plano de ${ano} excluído.`);
+  renderAcompanhamento();
+  renderConsolidado();
+  mostrarToast(`🗑️ Plano de ${ano} e seus dados foram removidos.`);
+}
+
+// Limpar dados órfãos (peças de anos sem plano) — botão da Administração
+function limparOrfaosUI() {
+  const o = DB.Plano.orfaos();
+  if (!o.total) { mostrarToast('✅ Nenhum dado órfão encontrado — banco limpo.'); return; }
+  const aviso = `Encontrados ${o.total} registros órfãos (de anos SEM plano):\n\n`
+    + `• ${o.semanas} configuração(ões) de semanas\n`
+    + `• ${o.munplano} plano(s) municipal(is) preenchido(s)\n`
+    + `• ${o.previewedit} prévia(s) de PDF\n\n`
+    + `Anos afetados: ${o.anos.join(', ')}\n\n`
+    + `Remover todos definitivamente? (recomendado exportar um backup antes)`;
+  if (!confirm(aviso)) return;
+  const r = DB.Plano.limparOrfaos();
+  renderPainelPlanos();
+  renderAcompanhamento();
+  renderConsolidado();
+  mostrarToast(`🧹 ${r.total} registro(s) órfão(s) removido(s).`);
 }
 
 // Editar o prazo de edição de um plano direto na tabela
