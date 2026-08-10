@@ -816,10 +816,13 @@ table.data-table td input:focus {
   .card { padding: 16px; }
   .modal { max-width: 100%; margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 85vh; }
   .modal-overlay { align-items: flex-end; padding: 0; }
-  /* sub-navegação do Planejamento: rola em vez de quebrar linha */
-  .subplan-nav { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .subplan-nav::-webkit-scrollbar { display: none; }
-  .subplan-tab { flex: 0 0 auto; white-space: nowrap; min-height: 44px; }
+  /* sub-navegação do Planejamento: quebra organizada (2 por linha), não rola */
+  .subplan-nav { flex-wrap: wrap; }
+  .subplan-tab { flex: 1 1 42%; justify-content: center; text-align: center; min-height: 44px; }
+  /* topo: esconde o nome longo (ex.: "12ª Regional de Saúde") para o "Sair" caber */
+  #nomeUsuario { display: none; }
+  .topbar { padding-left: 12px; padding-right: 12px; }
+  .topbar__logo { font-size: 17px; }
   /* faixa de ano e roleta */
   .ano-global { padding: 8px 12px; }
   .ano-global__bar { gap: 8px; }
