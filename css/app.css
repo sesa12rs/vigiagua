@@ -816,9 +816,21 @@ table.data-table td input:focus {
   .card { padding: 16px; }
   .modal { max-width: 100%; margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 85vh; }
   .modal-overlay { align-items: flex-end; padding: 0; }
-  /* sub-navegação do Planejamento: quebra organizada (2 por linha), não rola */
-  .subplan-nav { flex-wrap: wrap; }
-  .subplan-tab { flex: 1 1 42%; justify-content: center; text-align: center; min-height: 44px; }
+  /* sub-navegação do Planejamento: uma linha rolável, com as mesmas pistas
+     (barra fininha visível + degradê na borda direita) */
+  .subplan-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--slate-400) transparent;
+    -webkit-mask-image: linear-gradient(to right, #000 88%, transparent 100%);
+            mask-image: linear-gradient(to right, #000 88%, transparent 100%);
+  }
+  .subplan-nav::-webkit-scrollbar { height: 5px; }
+  .subplan-nav::-webkit-scrollbar-track { background: var(--slate-100); border-radius: 3px; }
+  .subplan-nav::-webkit-scrollbar-thumb { background: var(--slate-400); border-radius: 3px; }
+  .subplan-tab { flex: 0 0 auto; min-height: 44px; }
   /* topo: esconde o nome longo (ex.: "12ª Regional de Saúde") para o "Sair" caber */
   #nomeUsuario { display: none; }
   .topbar { padding-left: 12px; padding-right: 12px; }

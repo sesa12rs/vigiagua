@@ -512,9 +512,21 @@
       .param-row label { min-width: unset; width: 100%; }
       .param-control, .modo-toggle { width: 100%; }
       .weeks-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
-      /* abas do topo: QUEBRAM em linhas (todas visíveis), 2 por linha */
-      .main-tabs { flex-wrap: wrap; }
-      .main-tab { flex: 1 1 42%; font-size: 12.5px; padding: 10px 8px; min-height: 46px; gap: 5px; }
+      /* abas do topo: UMA linha rolável, com pistas claras de que há mais à direita
+         (barra fininha visível + degradê na borda + última aba cortada) */
+      .main-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color: var(--slate-400) transparent;
+        -webkit-mask-image: linear-gradient(to right, #000 86%, transparent 100%);
+                mask-image: linear-gradient(to right, #000 86%, transparent 100%);
+      }
+      .main-tabs::-webkit-scrollbar { height: 6px; }
+      .main-tabs::-webkit-scrollbar-track { background: var(--slate-100); border-radius: 3px; }
+      .main-tabs::-webkit-scrollbar-thumb { background: var(--slate-400); border-radius: 3px; }
+      .main-tab { flex: 0 0 auto; font-size: 13px; padding: 12px 16px; min-height: 46px; }
       .main-tab .tab-badge { font-size: 10px; padding: 1px 6px; }
       /* card de resultado: título e ações empilham em vez de estourar */
       .resultado-header { flex-direction: column; align-items: stretch; gap: 12px; }
