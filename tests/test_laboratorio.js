@@ -43,7 +43,7 @@ check('ano correto', d.ano === 2027);
 check('capacidade repassada', d.capacidade === 55);
 {
   const somaA = d.semanas.reduce((a, s) => a + s.totalA, 0);
-  check('soma tipo A das semanas = total distribuído do plano', somaA === p.totalDist, `${somaA} vs ${p.totalDist}`);
+  check('soma de físico-químicas das semanas = total distribuído do plano', somaA === p.totalDist, `${somaA} vs ${p.totalDist}`);
   const okB = d.semanas.every(s => s.totalB === s.totalA && s.totalFrascos === s.totalA * 2);
   check('tipo B espelha A e frascos = A×2', okB);
   const okMun = d.semanas.every(s => s.municipios.length === s.nMun && s.municipios.every(m => m.qtd > 0));
@@ -73,7 +73,7 @@ console.log('\n[CSV resumo semanal]');
 {
   const csv = Relatorios.csvResumoSemanal(d);
   const linhas = csv.trim().split('\n');
-  check('cabeçalho correto', linhas[0] === 'Semana,Data,Municipios,Amostras_TipoA,Amostras_TipoB,Total_Frascos');
+  check('cabeçalho correto', linhas[0] === 'Semana,Data,Municipios,Fisico_Quimicas,Microbiologicas,Total_Amostras');
   check('uma linha por semana', linhas.length === d.semanas.length + 1, `${linhas.length - 1} vs ${d.semanas.length}`);
   check('linha com 6 colunas', linhas[1].split(',').length === 6);
 }

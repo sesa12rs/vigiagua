@@ -6,24 +6,20 @@
      ═══════════════════════════════════════════ */
 
   const CRITERIO_INFO = {
-    'DG-1': { grupo: 'Distribuição Geográfica', desc: 'Ponto em zona de alta densidade populacional.' },
-    'DG-2': { grupo: 'Distribuição Geográfica', desc: 'Ponto em extremidade da rede de distribuição.' },
-    'DG-3': { grupo: 'Distribuição Geográfica', desc: 'Ponto em ramal com menor pressão/fluxo.' },
-    'DG-4': { grupo: 'Distribuição Geográfica', desc: 'Ponto em área rural ou periférica.' },
-    'DG-5': { grupo: 'Distribuição Geográfica', desc: 'Ponto próximo ao reservatório de distribuição.' },
-    'DG-6': { grupo: 'Distribuição Geográfica', desc: 'Ponto em ramal com histórico de contaminação.' },
-    'DG-7': { grupo: 'Distribuição Geográfica', desc: 'Ponto em loteamento novo ou recente.' },
-    'DG-8': { grupo: 'Distribuição Geográfica', desc: 'Ponto em área de risco sanitário.' },
-    'DG-9': { grupo: 'Distribuição Geográfica', desc: 'Outro critério de distribuição geográfica.' },
-    'LE-1': { grupo: 'Locais Estratégicos', desc: 'Escola / creche / instituição de ensino.' },
-    'LE-2': { grupo: 'Locais Estratégicos', desc: 'Unidade de saúde (UBS, hospital, clínica).' },
-    'LE-3': { grupo: 'Locais Estratégicos', desc: 'Berçário / maternidade / CRAS / CREAS.' },
-    'LE-4': { grupo: 'Locais Estratégicos', desc: 'Local de culto religioso.' },
-    'LE-5': { grupo: 'Locais Estratégicos', desc: 'Estabelecimento de alimentos (restaurante, padaria).' },
-    'LE-6': { grupo: 'Locais Estratégicos', desc: 'Presídio / unidade de internação.' },
-    'LE-7': { grupo: 'Locais Estratégicos', desc: 'Alojamento / abrigo / habitação coletiva.' },
-    'LE-8': { grupo: 'Locais Estratégicos', desc: 'Praça / logradouro público / bebedouro.' },
-    'LE-9': { grupo: 'Locais Estratégicos', desc: 'Outro local estratégico relevante.' },
+    'DG-1': { grupo: 'Distribuição Geográfica', desc: 'Saída do tratamento ou entrada no sistema de distribuição.' },
+    'DG-2': { grupo: 'Distribuição Geográfica', desc: 'Saída de reservatórios de distribuição.' },
+    'DG-3': { grupo: 'Distribuição Geográfica', desc: 'Ponto na rede de distribuição: Rede nova e antiga; Zonas altas e zonas baixas; Pontos de rede.' },
+    'DG-4': { grupo: 'Distribuição Geográfica', desc: 'Áreas mais densamente povoadas.' },
+    'DG-5': { grupo: 'Distribuição Geográfica', desc: 'Pontos não monitorados pelo controle: Solução alternativas; Fontes individuais no meio urbano; Escolas na zona rural.' },
+    'LE-1': { grupo: 'Locais Estratégicos', desc: 'Áreas com população em situação sanitária precária.' },
+    'LE-2': { grupo: 'Locais Estratégicos', desc: 'Consumidores mais vulneráveis (Hospitais, Escolas, Creches, etc.).' },
+    'LE-3': { grupo: 'Locais Estratégicos', desc: 'Áreas próximas a pontos de poluição (Indústrias, Lixões, Pontos de lançamento de esgoto, Cemitérios, etc.).' },
+    'LE-4': { grupo: 'Locais Estratégicos', desc: 'Áreas sujeitas à pressão negativa na rede de distribuição.' },
+    'LE-5': { grupo: 'Locais Estratégicos', desc: 'Pontos em que os resultados do controle indiquem problemas recorrentes.' },
+    'LE-6': { grupo: 'Locais Estratégicos', desc: 'Soluções alternativas desprovidas de tratamento, de rede de distribuição ou sem identificação de responsável.' },
+    'LE-7': { grupo: 'Locais Estratégicos', desc: 'Veículo transportador.' },
+    'LE-8': { grupo: 'Locais Estratégicos', desc: 'Áreas que, do ponto de vista epidemiológico, justifiquem atenção especial (por exemplo, ocorrência de casos de doenças de transmissão hídrica).' },
+    'LE-9': { grupo: 'Locais Estratégicos', desc: 'Outros.' },
   };
 
   const MUNICIPIO_POPULACAO = {
@@ -1110,8 +1106,19 @@
       return t;
     }
     function tabelaCriterios() {
-      const usados = [...new Set(coletas.concat(coletasExtras).map(c => c.criterio).filter(Boolean))];
-      const t = criarTabelaItem({ caption: 'Critérios de coleta utilizados (Anexo 1 da Diretriz Nacional)', head: ['Código', 'Descrição'], rows: usados.map(c => [c, CRITERIO_INFO[c]?.desc || '']) });
+      // Mostra TODOS os critérios (é informação do documento), agrupados por DG/LE,
+      // independentemente de quais foram selecionados nas coletas.
+      const linhas = [];
+      let grupoAtual = null;
+      Object.entries(CRITERIO_INFO).forEach(([code, info]) => {
+        if (info.grupo !== grupoAtual) {
+          grupoAtual = info.grupo;
+          const sigla = code.split('-')[0]; // "DG" ou "LE"
+          linhas.push(['__grupo__', `${sigla} — ${info.grupo}`]);
+        }
+        linhas.push([code, info.desc]);
+      });
+      const t = criarTabelaItem({ caption: 'Legenda dos Critérios de Amostragem (Anexo 1 da Diretriz Nacional)', head: ['Código', 'Descrição'], rows: linhas });
       t.dataset.tabela = 'criterios';
       return t;
     }
@@ -1372,11 +1379,20 @@
     const tbody = document.createElement('tbody');
     (rows || []).forEach(r => {
       const tr = document.createElement('tr');
-      (r || []).forEach(cell => {
+      if (r && r[0] === '__grupo__') {
+        // Linha de cabeçalho de grupo (ocupa a largura toda)
         const td = document.createElement('td');
-        td.innerHTML = String(cell ?? '');
+        td.colSpan = Math.max(1, (head || []).length);
+        td.innerHTML = `<b>${r[1] ?? ''}</b>`;
+        td.style.background = '#eef2f7';
         tr.appendChild(td);
-      });
+      } else {
+        (r || []).forEach(cell => {
+          const td = document.createElement('td');
+          td.innerHTML = String(cell ?? '');
+          tr.appendChild(td);
+        });
+      }
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);

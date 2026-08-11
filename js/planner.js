@@ -656,7 +656,7 @@ const Planner = (() => {
       }
     }
 
-    // ── ETAPA 6: Nivelar capacidade semanal (frascos tipo A) ──
+    // ── ETAPA 6: Nivelar capacidade semanal (físico-químicas) ──
     // Mantém 10 municípios/viagem trocando um município de quantidade alta
     // (em semana acima da capacidade) por um de quantidade menor (em semana
     // com folga). Cada troca preserva o nº de municípios de ambas as semanas

@@ -115,6 +115,25 @@ console.log('\n[Salvamento nas trocas de etapa]');
 
 // ── Smoke do DB.Sync com Supabase falso ──
 console.log('\n[DB.Sync — smoke com cliente falso]');
+/* ── Legenda de critérios no PDF: mostra TODOS, textos oficiais corretos ── */
+{
+  const mL = loadPage('municipio.html', { session:{userId:102,perfil:'municipio',nome:'Altônia',municipioId:3}, seedStorage:seed });
+  const dL = mL.window.document;
+  ['populacao','endereco','secretario','responsavel','profissional'].forEach((id,i)=>{ const el=dL.getElementById(id); if(el) el.value = i===0?'20500':'X'; });
+  dL.getElementById('municipio').value='Altônia';
+  dL.getElementById('vigilancia').value='Vigilância Ambiental';
+  mL.window.eval('irEtapa2()');
+  mL.window.eval('gerarPreview()');
+  const html = dL.getElementById('previewContent').innerHTML;
+  check('legenda de critérios com título correto', /Legenda dos Critérios de Amostragem/.test(html));
+  check('legenda mostra TODOS os critérios (DG-1..DG-5 + LE-1..LE-9)',
+    ['DG-1','DG-2','DG-3','DG-4','DG-5','LE-1','LE-2','LE-3','LE-4','LE-5','LE-6','LE-7','LE-8','LE-9'].every(c=>html.includes(c)));
+  check('DG-6..DG-9 removidos (não existem oficialmente)', !/DG-6|DG-7|DG-8|DG-9/.test(html));
+  check('texto oficial de DG-1 correto', html.includes('Saída do tratamento ou entrada no sistema de distribuição'));
+  check('texto oficial de LE-6 correto', html.includes('Soluções alternativas desprovidas de tratamento'));
+  check('cabeçalhos de grupo DG e LE presentes', /DG — Distribuição Geográfica/.test(html) && /LE — Locais Estratégicos/.test(html));
+}
+
 const m3 = loadPage('municipio.html', { session:{userId:102,perfil:'municipio',nome:'Altônia',municipioId:3}, seedStorage:seed2 });
 const w = m3.window;
 const upserts=[]; const store={};

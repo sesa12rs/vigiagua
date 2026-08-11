@@ -10,9 +10,10 @@ const Relatorios = (() => {
 
   /**
    * Agrega o plano em dados de laboratório.
-   * Convenção do sistema: cada coleta gera uma amostra tipo A e uma tipo B
-   * (tipo B espelha o total de A → total de frascos da viagem = A × 2).
-   * A capacidade do laboratório é medida em tipo A (= totSem por semana).
+   * Convenção do sistema: cada coleta gera uma amostra físico-química E uma
+   * microbiológica (as duas andam sempre juntas). Total de amostras da
+   * viagem = coletas × 2. A capacidade do laboratório é medida em coletas
+   * (= nº de físico-químicas = nº de microbiológicas = totSem por semana).
    */
   function dadosLaboratorio(plano) {
     if (!plano || !plano.ok) return null;
@@ -37,7 +38,7 @@ const Relatorios = (() => {
         semana:       si + 1,
         data:         tercas[si],
         totalA,
-        totalB:       totalA,      // tipo B espelha tipo A
+        totalB:       totalA,      // microbiológicas = físico-químicas (1 de cada por coleta)
         totalFrascos: totalA * 2,  // A + B
         nMun:         muns.length,
         municipios:   muns,
@@ -75,7 +76,7 @@ const Relatorios = (() => {
   /** CSV de resumo por semana (formato de conferência do laboratório). */
   function csvResumoSemanal(dados) {
     if (!dados) return '';
-    let csv = 'Semana,Data,Municipios,Amostras_TipoA,Amostras_TipoB,Total_Frascos\n';
+    let csv = 'Semana,Data,Municipios,Fisico_Quimicas,Microbiologicas,Total_Amostras\n';
     dados.semanas.forEach(s => {
       const data = s.data.toLocaleDateString('pt-BR');
       csv += `${s.semana},${data},${s.nMun},${s.totalA},${s.totalB},${s.totalFrascos}\n`;

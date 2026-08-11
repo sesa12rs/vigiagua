@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v54';
+  window.VIGIAGUA_VERSAO = 'fase2-v55';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -116,7 +116,7 @@ const DB = (() => {
   const CONFIG_PADRAO = {
     ano: 2026,
 
-    // ── Capacidade do laboratório (frascos tipo A) POR SEMANA ──
+    // ── Capacidade do laboratório (físico-químicas) POR SEMANA ──
     // Restrição real: o teto (exato ou máx) é respeitado pelo nivelamento.
     modoCapacidade:  'exato',   // 'exato' | 'intervalo'
     capacidadeExata: 55,

@@ -253,8 +253,8 @@ function renderLaboratorio() {
   // Totais + escala
   const totais = document.getElementById('labResumoTotais');
   if (totais) {
-    totais.innerHTML = `No ano: <strong>${dados.totalAmostrasA}</strong> amostras tipo A · `
-      + `<strong>${dados.totalFrascosAno}</strong> frascos (com tipo B) · em <strong>${dados.semanas.length}</strong> viagens`
+    totais.innerHTML = `No ano: <strong>${dados.totalAmostrasA}</strong> físico-químicas + <strong>${dados.totalAmostrasA}</strong> microbiológicas = `
+      + `<strong>${dados.totalFrascosAno}</strong> amostras · em <strong>${dados.semanas.length}</strong> viagens`
       + (dados.capacidade != null ? ` · capacidade <strong>${dados.capacidade}</strong>/semana` : '');
   }
 
@@ -293,7 +293,7 @@ function renderLabCarga(dados) {
       if (s.totalA > cap)          cor = 'var(--red-500)';
       else if (s.totalA >= cap * 0.9) cor = 'var(--amber-500)';
     }
-    svg += `<rect x="${x}" y="${y.toFixed(1)}" width="${barW}" height="${Math.max(h, 0).toFixed(1)}" rx="3" fill="${cor}"><title>Semana ${s.semana} (${_fmtDDMM(s.data)}): ${s.totalA} tipo A · ${s.totalFrascos} frascos</title></rect>`;
+    svg += `<rect x="${x}" y="${y.toFixed(1)}" width="${barW}" height="${Math.max(h, 0).toFixed(1)}" rx="3" fill="${cor}"><title>Semana ${s.semana} (${_fmtDDMM(s.data)}): ${s.totalA} físico-químicas · ${s.totalA} microbiológicas · ${s.totalFrascos} amostras</title></rect>`;
     svg += `<text x="${x + barW / 2}" y="${(y - 4).toFixed(1)}" font-size="9.5" text-anchor="middle" fill="var(--slate-600)">${s.totalA}</text>`;
     if (i % rotulaCada === 0)
       svg += `<text x="${x + barW / 2}" y="${yBase + 14}" font-size="9" text-anchor="middle" fill="var(--slate-500)">${_fmtDDMM(s.data)}</text>`;
@@ -322,7 +322,7 @@ function renderLabHeatmap(dados) {
     l.celulas.forEach(v => { h += `<td style="${cellStyle(v)}">${v || ''}</td>`; });
     h += `<td class="lab-heat__tot">${l.total}</td></tr>`;
   });
-  h += `<tr class="lab-heat__foot"><td class="lab-heat__mun">Total/semana (tipo A)</td>`;
+  h += `<tr class="lab-heat__foot"><td class="lab-heat__mun">Total/semana (coletas)</td>`;
   dados.semanas.forEach(s => { h += `<td>${s.totalA}</td>`; });
   h += `<td>${dados.totalAmostrasA}</td></tr>`;
   h += '</tbody></table>';
@@ -337,7 +337,7 @@ function renderLabRomaneio(dados) {
     r += `<div style="border:1px solid var(--slate-200);border-radius:12px;padding:12px 16px;">
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline;border-bottom:1px solid var(--slate-100);padding-bottom:8px;margin-bottom:8px;">
         <strong style="color:var(--slate-800);">Semana ${s.semana} · ${s.data.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' })}</strong>
-        <span style="font-size:12.5px;color:var(--slate-600);">${s.nMun} municípios · <strong>${s.totalA}</strong> tipo A · <strong>${s.totalB}</strong> tipo B · <strong>${s.totalFrascos}</strong> frascos</span>
+        <span style="font-size:12.5px;color:var(--slate-600);">${s.nMun} municípios · <strong>${s.totalA}</strong> físico-químicas · <strong>${s.totalB}</strong> microbiológicas · <strong>${s.totalFrascos}</strong> amostras</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
     s.municipios.forEach(m => {
@@ -362,15 +362,15 @@ function imprimirRomaneio() {
   if (!_labDados) { mostrarToast('Gere o plano do ano primeiro.'); return; }
   const d = _labDados;
   let body = `<h1>Romaneio de coletas — 12ª RS · ${d.ano}</h1>`
-    + `<p class="sub">Total no ano: <b>${d.totalAmostrasA}</b> amostras tipo A · <b>${d.totalFrascosAno}</b> frascos (com tipo B)`
+    + `<p class="sub">Total no ano: <b>${d.totalAmostrasA}</b> físico-químicas + <b>${d.totalAmostrasA}</b> microbiológicas = <b>${d.totalFrascosAno}</b> amostras`
     + (d.capacidade != null ? ` · capacidade ${d.capacidade}/semana` : '') + `.</p>`;
   d.semanas.forEach(s => {
     body += `<div class="viagem"><h2>Semana ${s.semana} — ${s.data.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })}</h2>`
-      + `<table><thead><tr><th>Município</th><th>Amostras (tipo A)</th></tr></thead><tbody>`;
+      + `<table><thead><tr><th>Município</th><th>Coletas</th></tr></thead><tbody>`;
     s.municipios.forEach(m => { body += `<tr><td>${m.nome}</td><td>${m.qtd}</td></tr>`; });
-    body += `<tr class="tot"><td>Total tipo A</td><td>${s.totalA}</td></tr>`
-      + `<tr class="tot"><td>Total tipo B</td><td>${s.totalB}</td></tr>`
-      + `<tr class="tot"><td>Total de frascos</td><td>${s.totalFrascos}</td></tr>`
+    body += `<tr class="tot"><td>Total físico-químicas</td><td>${s.totalA}</td></tr>`
+      + `<tr class="tot"><td>Total microbiológicas</td><td>${s.totalB}</td></tr>`
+      + `<tr class="tot"><td>Total de amostras</td><td>${s.totalFrascos}</td></tr>`
       + `</tbody></table></div>`;
   });
   const win = window.open('', '_blank');
@@ -1464,12 +1464,12 @@ function renderMunicipios() {
       <div class="stat-card__value">${municipios.length}</div>
     </div>
     <div class="stat-card stat-card--info">
-      <div class="stat-card__label">Total Tipo A</div>
+      <div class="stat-card__label">Total Físico-Químicas</div>
       <div class="stat-card__value">${totalA.toLocaleString('pt-BR')}</div>
       <div class="stat-card__sub">amostras/ano</div>
     </div>
     <div class="stat-card stat-card--accent">
-      <div class="stat-card__label">Total Geral A+B</div>
+      <div class="stat-card__label">Total Geral de Amostras</div>
       <div class="stat-card__value">${(totalA*2).toLocaleString('pt-BR')}</div>
       <div class="stat-card__sub">amostras/ano</div>
     </div>
@@ -1490,7 +1490,7 @@ function renderMunicipios() {
     div.innerHTML = `
       <div>
         <div class="mun-row__nome">${m.nome}</div>
-        <div class="mun-row__sub">Meta: ${m.meta} tipo A &nbsp;·&nbsp; ${m.meta*2} total</div>
+        <div class="mun-row__sub">Meta: ${m.meta} físico-químicas &nbsp;·&nbsp; ${m.meta*2} amostras</div>
       </div>
       <div class="mun-row__right">
         <input type="number" value="${m.meta}" min="1" max="999" style="width:80px;text-align:right;font-weight:700;"
@@ -1554,7 +1554,7 @@ function abrirModalRegras(idx) {
   document.getElementById('modalRegrasTitle').textContent = `Regras — ${m.nome}`;
   document.getElementById('modalRegrasBody').innerHTML = `
     <div style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.7;">
-      <strong>Meta anual:</strong> ${m.meta} tipo A · ${m.meta*2} total
+      <strong>Meta anual:</strong> ${m.meta} físico-químicas · ${m.meta*2} amostras
       ${sugestao ? `<br><span style="color:var(--green-700);">💡 Para 1×/mês: <strong>${sugestao} frascos/visita</strong> (${m.meta} ÷ 12 = ${sugestao})</span>` : ''}
     </div>
 
@@ -1787,7 +1787,7 @@ function mostrarResultado() {
   document.getElementById('secaoResultado').classList.add('visivel');
   document.getElementById('resultadoTitulo').textContent = `Plano ${p.cfg.ano} — ${taxa}% das metas`;
   document.getElementById('resultadoSub').textContent    =
-    `${p.totalDist.toLocaleString('pt-BR')} amostras tipo A · gerado em ${new Date(p.geradoEm).toLocaleDateString('pt-BR')}`;
+    `${p.totalDist.toLocaleString('pt-BR')} físico-químicas + ${(p.totalDist*2).toLocaleString('pt-BR')} amostras totais · gerado em ${new Date(p.geradoEm).toLocaleDateString('pt-BR')}`;
 
   document.getElementById('resultadoAcoes').innerHTML = `
     <span id="statusPlanoTopo"></span>
@@ -1863,7 +1863,7 @@ function mostrarResultado() {
         <div class="stat-card__sub">${p.totalDist} / ${p.totalEsper}</div>
       </div>
       <div class="stat-card stat-card--info">
-        <div class="stat-card__label">Total A+B</div>
+        <div class="stat-card__label">Total de amostras</div>
         <div class="stat-card__value">${(p.totalDist*2).toLocaleString('pt-BR')}</div>
         <div class="stat-card__sub">amostras no ano</div>
       </div>
