@@ -628,6 +628,38 @@
           O sistema garante automaticamente: <strong id="infoMunAlvo">10 municípios por viagem</strong>, quantidade uniforme por visita, 100% das metas e distribuição equilibrada ao longo do ano. Configure apenas os limites abaixo.
         </div>
 
+        <!-- Sub-bloco: Dia da semana de Coleta e Entrega -->
+        <div class="subsecao">
+          <div class="subsecao__cab">
+            <span class="subsecao__icone">📅</span>
+            <span class="subsecao__titulo">Dia da semana — Coleta e Entrega</span>
+            <span class="subsecao__hint">define em que dia a viagem coleta e em que dia entrega ao laboratório (usado no cálculo de feriados)</span>
+          </div>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--slate-600);font-weight:600;">
+              Dia da coleta
+              <select id="cfgDiaColeta" onchange="onDiaColetaChange()" style="padding:8px 10px;border:1px solid var(--slate-300);border-radius:8px;font-size:14px;min-width:150px;">
+                <option value="1">Segunda-feira</option>
+                <option value="2">Terça-feira</option>
+                <option value="3">Quarta-feira</option>
+                <option value="4">Quinta-feira</option>
+                <option value="5">Sexta-feira</option>
+              </select>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--slate-600);font-weight:600;">
+              Dia da entrega
+              <select id="cfgDiaEntrega" onchange="onDiaColetaChange()" style="padding:8px 10px;border:1px solid var(--slate-300);border-radius:8px;font-size:14px;min-width:150px;">
+                <option value="1">Segunda-feira</option>
+                <option value="2">Terça-feira</option>
+                <option value="3">Quarta-feira</option>
+                <option value="4">Quinta-feira</option>
+                <option value="5">Sexta-feira</option>
+              </select>
+            </label>
+          </div>
+          <p style="margin:10px 0 0;font-size:12px;color:var(--slate-500);">Padrão da 12ª RS: coleta na <strong>terça</strong>, entrega na <strong>quarta</strong>. Mudar o dia recalcula as datas e as semanas — gere o plano de novo para aplicar.</p>
+        </div>
+
         <!-- Sub-bloco: Laboratório -->
         <div class="subsecao">
           <div class="subsecao__cab">

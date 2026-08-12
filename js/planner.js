@@ -67,6 +67,7 @@ const Planner = (() => {
   function validar(cfg, municipios, tercas, semanasAtivas, feriados) {
     const erros = [], avisos = [];
     const fMun  = feriados.municipais || {};
+    const offEnt = Utils.offsetEntrega(cfg);
     const idx   = semanasAtivas.map((a,i) => a ? i : -1).filter(i => i >= 0);
     const nSem  = idx.length;
 
@@ -107,7 +108,7 @@ const Planner = (() => {
 
     // ── Slots matemáticos: P6 vs metas ─────────
     const semUmu    = umuIdx >= 0
-      ? idx.filter(si => !Utils.ehFeriadoMunicipal('Umuarama', tercas[si], fMun))
+      ? idx.filter(si => !Utils.ehFeriadoMunicipal('Umuarama', tercas[si], fMun, offEnt))
       : idx;
     const semUmuSet = new Set(semUmu);
 
@@ -154,7 +155,7 @@ const Planner = (() => {
     // ── Por município: meta vs semanas disponíveis e max frascos ──
     municipios.forEach((m, i) => {
       const semDisp = idx.filter(si =>
-        !Utils.ehFeriadoMunicipal(m.nome, tercas[si], fMun)
+        !Utils.ehFeriadoMunicipal(m.nome, tercas[si], fMun, offEnt)
       ).length;
 
       if (semDisp === 0) {
@@ -203,7 +204,7 @@ const Planner = (() => {
       if (ppMes !== null) {
         // Meses disponíveis para este município
         const mesesDispMun = new Set(
-          idx.filter(si => !Utils.ehFeriadoMunicipal(m.nome, tercas[si], fMun))
+          idx.filter(si => !Utils.ehFeriadoMunicipal(m.nome, tercas[si], fMun, offEnt))
              .map(si => tercas[si].getMonth() + 1)
         );
         const nMesesMun = mesesDispMun.size;
@@ -245,6 +246,7 @@ const Planner = (() => {
   /* ── Gerador principal ──────────────────────── */
   function gerar(cfg, municipios, tercas, semanasAtivas, feriados) {
     const fMun        = feriados.municipais || {};
+    const offEnt      = Utils.offsetEntrega(cfg);
     const nMun        = municipios.length;
     const nSem        = tercas.length;
     const idx         = semanasAtivas.map((a,i) => a ? i : -1).filter(i => i >= 0);
@@ -264,7 +266,7 @@ const Planner = (() => {
 
     // Semanas disponíveis por município (sem feriado municipal próprio)
     const semDispMun = municipios.map(m =>
-      idx.filter(si => !Utils.ehFeriadoMunicipal(m.nome, tercas[si], fMun))
+      idx.filter(si => !Utils.ehFeriadoMunicipal(m.nome, tercas[si], fMun, offEnt))
     );
 
     // Semanas onde Umuarama está disponível
@@ -545,7 +547,7 @@ const Planner = (() => {
             if (mi === umuIdx) continue;
             if (dist[mi][sj] <= 0) continue;
             if (dist[mi][si] > 0) continue;
-            if (Utils.ehFeriadoMunicipal(municipios[mi].nome, tercas[si], fMun)) continue;
+            if (Utils.ehFeriadoMunicipal(municipios[mi].nome, tercas[si], fMun, offEnt)) continue;
             const nParticMi  = idx.filter(s => dist[mi][s] > 0).length;
             const temPeriod  = particPorMes(resolverPeriodicidade(municipios[mi].regras)) !== null;
             // Verificar que mover não quebra a periodicidade deste município neste mês
@@ -604,7 +606,7 @@ const Planner = (() => {
             for (let mi = 0; mi < nMun; mi++) {
               if (mi === umuIdx) continue;
               if (dist[mi][sj] <= 0 || dist[mi][si] > 0) continue;
-              if (Utils.ehFeriadoMunicipal(municipios[mi].nome, tercas[si], fMun)) continue;
+              if (Utils.ehFeriadoMunicipal(municipios[mi].nome, tercas[si], fMun, offEnt)) continue;
               // Proteger periodicidade também no fallback
               const ppMesMunFb = particPorMes(resolverPeriodicidade(municipios[mi].regras));
               if (ppMesMunFb !== null && mesOrigem !== mesDestino) {

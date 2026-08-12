@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v57';
+  window.VIGIAGUA_VERSAO = 'fase2-v58';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -135,6 +135,11 @@ const DB = (() => {
    */
   const CONFIG_PADRAO = {
     ano: 2026,
+
+    // ── Dia da semana de Coleta e Entrega (0=Dom … 6=Sáb) ──
+    // Padrão: coleta terça (2), entrega quarta (3).
+    diaColeta:  2,
+    diaEntrega: 3,
 
     // ── Capacidade do laboratório (físico-químicas) POR SEMANA ──
     // Restrição real: o teto (exato ou máx) é respeitado pelo nivelamento.

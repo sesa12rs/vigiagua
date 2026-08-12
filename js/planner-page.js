@@ -751,10 +751,24 @@ function renderResumos() {
 /* ════════════════════════════════════════════
    ANO — sincronizado
    ════════════════════════════════════════════ */
+function _diaColeta()  { const el = document.getElementById('cfgDiaColeta');  return el ? (parseInt(el.value)) : 2; }
+function _diaEntrega() { const el = document.getElementById('cfgDiaEntrega'); return el ? (parseInt(el.value)) : 3; }
+function _offsetEntrega() { return (((_diaEntrega() - _diaColeta()) % 7) + 7) % 7; }
+
+// Trocar o dia de coleta/entrega desloca TODAS as datas → recalcula as semanas.
+function onDiaColetaChange() {
+  const ano = parseInt(document.getElementById('cfgAno').value) || 2026;
+  tercas = Utils.tercasFeirasDoAno(ano, _diaColeta());
+  inicializarSemanas(true);          // recomputa semanas ativas p/ as novas datas
+  renderSemanasGrid();
+  renderStatusPlano();
+  mostrarToast('📅 Dia de coleta/entrega atualizado — semanas recalculadas.');
+}
+
 function onAnoChange(val) {
   const ano = parseInt(val) || 2026;
   document.getElementById('cfgAno').value = ano;
-  tercas = Utils.tercasFeirasDoAno(ano);
+  tercas = Utils.tercasFeirasDoAno(ano, _diaColeta());
   const salvas = DB.Semanas.carregar(ano);
   semanasAtivas = (salvas && salvas.length === tercas.length)
     ? salvas
@@ -1092,6 +1106,11 @@ function carregarConfigUI() {
   const cfg = DB.Config.carregar();
   document.getElementById('cfgAno').value = cfg.ano || 2026;
 
+  const selC = document.getElementById('cfgDiaColeta');
+  const selE = document.getElementById('cfgDiaEntrega');
+  if (selC) selC.value = String(cfg.diaColeta ?? 2);
+  if (selE) selE.value = String(cfg.diaEntrega ?? 3);
+
   // Capacidade do laboratório / semana (fixo ou intervalo)
   setModoCapacidade(cfg.modoCapacidade || 'exato', true);
   document.getElementById('cfgCapacidadeExata').value = cfg.capacidadeExata ?? '';
@@ -1138,6 +1157,9 @@ function lerConfig() {
 
   return {
     ano:             parseInt(document.getElementById('cfgAno').value) || 2026,
+
+    diaColeta:       _diaColeta(),
+    diaEntrega:      _diaEntrega(),
 
     modoCapacidade:  modoC,
     capacidadeExata: capExata,
@@ -1213,17 +1235,17 @@ function setModoAlerta(modo, silencioso = false) {
    SEMANAS
    ════════════════════════════════════════════ */
 function calcularSemanasDefault(ano) {
-  const t      = Utils.tercasFeirasDoAno(ano);
+  const t      = Utils.tercasFeirasDoAno(ano, _diaColeta());
   const ferNac = Utils.feriadosNacionaisAno(ano, feriados.nacionais || []);
   const a      = t.map(() => true);
   Utils.semanasDeFerias(t).forEach(i => { a[i] = false; });
-  Utils.semanasComFeriadoNacQua(t, ferNac).forEach(i => { a[i] = false; });
+  Utils.semanasComFeriadoNacQua(t, ferNac, _offsetEntrega()).forEach(i => { a[i] = false; });
   return a;
 }
 
 function inicializarSemanas(forcar = false) {
   const ano  = parseInt(document.getElementById('cfgAno').value) || 2026;
-  tercas = Utils.tercasFeirasDoAno(ano);
+  tercas = Utils.tercasFeirasDoAno(ano, _diaColeta());
   const salvas = DB.Semanas.carregar(ano);
   semanasAtivas = (salvas && salvas.length === tercas.length && !forcar)
     ? salvas
@@ -1292,7 +1314,7 @@ function ativarSoFeriadosNac() {
   const ano    = parseInt(document.getElementById('cfgAno').value) || 2026;
   const ferNac = Utils.feriadosNacionaisAno(ano, feriados.nacionais || []);
   semanasAtivas = tercas.map(() => true);
-  Utils.semanasComFeriadoNacQua(tercas, ferNac).forEach(i => { semanasAtivas[i] = false; });
+  Utils.semanasComFeriadoNacQua(tercas, ferNac, _offsetEntrega()).forEach(i => { semanasAtivas[i] = false; });
   DB.Semanas.salvar(ano, semanasAtivas);
   renderSemanasGrid();
   mostrarToast('🎉 Apenas feriados nacionais bloqueados.');

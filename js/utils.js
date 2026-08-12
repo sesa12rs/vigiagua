@@ -58,11 +58,11 @@ const Utils = (() => {
     return lista;
   }
 
-  /* ── Todas as terças do ano ──────────────── */
-  function tercasFeirasDoAno(ano) {
+  /* ── Todas as datas do DIA DE COLETA no ano (padrão: terça = 2) ── */
+  function tercasFeirasDoAno(ano, diaColeta = 2) {
     const lista = [];
     let d = new Date(ano, 0, 1);
-    while (d.getDay() !== 2) d = _addDays(d, 1);
+    while (d.getDay() !== diaColeta) d = _addDays(d, 1);
     while (d.getFullYear() === ano) {
       lista.push(new Date(d));
       d = _addDays(d, 7);
@@ -70,24 +70,31 @@ const Utils = (() => {
     return lista;
   }
 
-  /* ── Verifica se quarta da semana é feriado nacional ─ */
-  function quartaEhFeriadoNacional(terca, feriadosNac) {
-    const quarta = _addDays(terca, 1);
+  /* ── Distância (em dias) entre coleta e entrega a partir da config ── */
+  function offsetEntrega(cfg) {
+    const c = cfg && cfg.diaColeta, e = cfg && cfg.diaEntrega;
+    if (c == null || e == null) return 1;   // padrão: entrega = coleta + 1 (quarta)
+    return (((e - c) % 7) + 7) % 7;
+  }
+
+  /* ── Verifica se o DIA DE ENTREGA da semana é feriado nacional ─ */
+  function quartaEhFeriadoNacional(terca, feriadosNac, offset = 1) {
+    const entrega = _addDays(terca, offset);
     return feriadosNac.some(f =>
-      f.getDate()  === quarta.getDate() &&
-      f.getMonth() === quarta.getMonth()
+      f.getDate()  === entrega.getDate() &&
+      f.getMonth() === entrega.getMonth()
     );
   }
 
-  /* ── Verifica feriado municipal na terça ou quarta ─── */
-  function ehFeriadoMunicipal(munNome, terca, feriadosMunicipais) {
+  /* ── Verifica feriado municipal no dia de COLETA ou de ENTREGA ─── */
+  function ehFeriadoMunicipal(munNome, terca, feriadosMunicipais, offset = 1) {
     const lista = feriadosMunicipais[munNome];
     if (!lista) return false;
-    const quarta = _addDays(terca, 1);
+    const entrega = _addDays(terca, offset);
     return lista.some(f => {
-      const isDiaTerca  = f.mes === terca.getMonth()  + 1 && f.dia === terca.getDate();
-      const isDiaQuarta = f.mes === quarta.getMonth() + 1 && f.dia === quarta.getDate();
-      return isDiaTerca || isDiaQuarta;
+      const isDiaColeta  = f.mes === terca.getMonth()   + 1 && f.dia === terca.getDate();
+      const isDiaEntrega = f.mes === entrega.getMonth() + 1 && f.dia === entrega.getDate();
+      return isDiaColeta || isDiaEntrega;
     });
   }
 
@@ -101,9 +108,9 @@ const Utils = (() => {
   }
 
   /* ── Semanas com feriado nacional na quarta ─ */
-  function semanasComFeriadoNacQua(tercas, feriadosNac) {
+  function semanasComFeriadoNacQua(tercas, feriadosNac, offset = 1) {
     return tercas.map((t, i) =>
-      quartaEhFeriadoNacional(t, feriadosNac) ? i : -1
+      quartaEhFeriadoNacional(t, feriadosNac, offset) ? i : -1
     ).filter(i => i >= 0);
   }
 
@@ -140,7 +147,7 @@ const Utils = (() => {
   }
 
   return {
-    calcularPascoa, feriadosNacionaisAno, tercasFeirasDoAno,
+    calcularPascoa, feriadosNacionaisAno, tercasFeirasDoAno, offsetEntrega,
     quartaEhFeriadoNacional, ehFeriadoMunicipal,
     semanasDeFerias, semanasComFeriadoNacQua, getPeriodo,
     fmtData, fmtDataLonga, nomeMes, semanaISO,
