@@ -863,6 +863,8 @@ table.data-table td input:focus {
 .cons-table th { background: var(--slate-50); color: var(--slate-600); font-weight: 600; position: sticky; top: 0; white-space: nowrap; }
 .cons-table th:nth-child(n+8):nth-child(-n+11), .cons-table td:nth-child(n+8):nth-child(-n+11) { text-align: center; }
 .cons-table tbody tr:hover { background: var(--blue-50); }
+.cons-table tfoot td { position: sticky; bottom: 0; background: var(--slate-100); font-weight: 600; color: var(--slate-700); border-top: 2px solid var(--slate-300); white-space: nowrap; }
+.cons-table th { z-index: 2; }
 
 /* ── Faixa de ano GLOBAL (topo, governa todas as abas) ── */
 .ano-global {

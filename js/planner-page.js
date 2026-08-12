@@ -358,6 +358,15 @@ function baixarCsvResumoSemanal() {
   a.click();
 }
 
+function baixarCsvHeatmap() {
+  if (!_labDados) { mostrarToast('Gere o plano do ano primeiro.'); return; }
+  const csv = Relatorios.csvHeatmap(_labDados);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }));
+  a.download = `vigiagua_heatmap_${_labDados.ano}.csv`;
+  a.click();
+}
+
 function imprimirRomaneio() {
   if (!_labDados) { mostrarToast('Gere o plano do ano primeiro.'); return; }
   const d = _labDados;
@@ -527,7 +536,22 @@ function aplicarFiltrosConsolidado() {
       + `<td style="white-space:nowrap;">${l.criterio || '—'}</td>`
       + `</tr>`;
   });
-  h += `</tbody></table>`;
+  h += `</tbody>`;
+
+  // Rodapé de TOTAIS (da visão filtrada), com contagem por parâmetro
+  const mostrarNao = document.getElementById('consMostrarNao')?.checked;
+  const n = _consFiltradas.length;
+  const contarParam = p => _consFiltradas.filter(l => l[p]).length;
+  const cMB = contarParam('mb'), cTB = contarParam('tb'), cCR = contarParam('cr'), cFL = contarParam('fl');
+  const cel = com => mostrarNao
+    ? `<strong>${com}</strong> <span style="color:var(--slate-400);">/ ${n - com}</span>`
+    : `<strong>${com}</strong>`;
+  h += `<tfoot><tr class="cons-foot">`
+    + `<td colspan="7">TOTAIS — ${n} coleta(s)${mostrarNao ? ' · <span style="color:var(--slate-400);">✓ com / ✗ sem</span>' : ''}</td>`
+    + `<td>${cel(cMB)}</td><td>${cel(cTB)}</td><td>${cel(cCR)}</td><td>${cel(cFL)}</td><td></td>`
+    + `</tr></tfoot>`;
+
+  h += `</table>`;
   tbl.innerHTML = h;
 }
 

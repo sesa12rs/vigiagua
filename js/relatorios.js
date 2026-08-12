@@ -84,6 +84,19 @@ const Relatorios = (() => {
     return csv;
   }
 
+  /** CSV do heatmap semana × município (linhas = municípios, colunas = semanas). */
+  function csvHeatmap(dados) {
+    if (!dados) return '';
+    const esc = s => `"${String(s == null ? '' : s).replace(/"/g, '""')}"`;
+    const cols = dados.heatmap.colunas;
+    let csv = 'Municipio,' + cols.map(c => c.data.toLocaleDateString('pt-BR')).join(',') + ',Total\n';
+    dados.heatmap.linhas.forEach(l => {
+      csv += [esc(l.nome), ...l.celulas, l.total].join(',') + '\n';
+    });
+    csv += 'Total/semana,' + dados.semanas.map(s => s.totalA).join(',') + ',' + dados.totalAmostrasA + '\n';
+    return csv;
+  }
+
   /* ── Consolidado das coletas preenchidas pelos municípios ── */
   const SIGLAS = {
     'Alto Paraíso': 'APR', 'Alto Piquiri': 'API', 'Altônia': 'ALT',
@@ -174,7 +187,7 @@ const Relatorios = (() => {
     return csv;
   }
 
-  return { dadosLaboratorio, csvResumoSemanal, consolidadoColetas, csvConsolidado };
+  return { dadosLaboratorio, csvResumoSemanal, csvHeatmap, consolidadoColetas, csvConsolidado };
 })();
 
 if (typeof window !== 'undefined') window.Relatorios = Relatorios;
