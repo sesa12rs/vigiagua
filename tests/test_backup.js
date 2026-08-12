@@ -152,6 +152,25 @@ banco['va_previewedit_Altônia_2027'] = JSON.stringify({ blocos: [] });
     check('nada de 2027 foi deletado', !deletes.some(k => k.endsWith('_2027')));
   }
 
+  console.log('\n[Limpeza de cache na troca de usuário / logout (fatia 3)]');
+  {
+    // Cache do usuário anterior + token de login + lembrete de backup
+    localStorage.setItem('va_session', JSON.stringify({ userId: 1, perfil: 'regional', municipioId: null }));
+    localStorage.setItem('va_plano_2027', JSON.stringify({ ok: true }));
+    localStorage.setItem('va_munplano_Altônia_2027', JSON.stringify({ v: 1 }));
+    localStorage.setItem('va_ultimo_backup', '2026-08-01');
+    localStorage.setItem('sb-xyz-auth-token', 'TOKEN123');   // token do Supabase (não é va_)
+    banco['va_plano_2027'] = JSON.stringify({ ok: true });    // continua no banco
+    deletes.length = 0;
+
+    const n = DB.limparCacheDados();
+    check('removeu as chaves va_ de dados', localStorage.getItem('va_plano_2027') === null && localStorage.getItem('va_munplano_Altônia_2027') === null && localStorage.getItem('va_session') === null);
+    check('preservou o lembrete de backup (va_ultimo_backup)', localStorage.getItem('va_ultimo_backup') === '2026-08-01');
+    check('preservou o token de login do Supabase', localStorage.getItem('sb-xyz-auth-token') === 'TOKEN123');
+    check('NÃO deletou nada no banco (é só cache local)', deletes.length === 0 && 'va_plano_2027' in banco, `deletes=${deletes.length}`);
+    check('retornou a contagem do que limpou (≥ 3)', n >= 3, String(n));
+  }
+
   console.log(fail ? `\n\u274c ${fail} falha(s)` : '\n\u2705 Backup/restauração OK');
   process.exit(fail ? 1 : 0);
 })();

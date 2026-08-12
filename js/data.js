@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v56';
+  window.VIGIAGUA_VERSAO = 'fase2-v57';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -34,6 +34,26 @@ const DB = (() => {
   function del(key) {
     localStorage.removeItem(key);
     if (_syncRef) _syncRef.pushAgora(key);
+  }
+
+  /** Mesmo usuário logado? (para detectar troca de conta na mesma máquina) */
+  function _mesmoUsuario(a, b) {
+    return !!a && !!b && a.userId === b.userId && a.perfil === b.perfil && a.municipioId === b.municipioId;
+  }
+
+  /** Limpa o CACHE local de dados (chaves va_*), preservando o que for indicado.
+   *  IMPORTANTE: é uma limpeza SÓ do cache da máquina — usa removeItem direto e
+   *  NUNCA sincroniza (jamais deleta dados do Supabase). O token de login do
+   *  Supabase (sb-...) não começa com "va_", então é sempre preservado. */
+  function limparCacheDados(preservar) {
+    const keep = new Set(preservar || ['va_ultimo_backup']);
+    const rm = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf('va_') === 0 && !keep.has(k)) rm.push(k);
+    }
+    rm.forEach(k => localStorage.removeItem(k));   // só local, sem sync
+    return rm.length;
   }
 
   /* ══════════════════════════════════════════════
@@ -179,10 +199,13 @@ const DB = (() => {
       );
       if (!u) return { ok: false, erro: 'E-mail ou senha inválidos.' };
       const sessao = { userId: u.id, perfil: u.perfil, nome: u.nome, municipioId: u.municipioId };
+      // Troca de conta na mesma máquina → limpa o cache do usuário anterior
+      const anterior = get('va_session');
+      if (anterior && !_mesmoUsuario(anterior, sessao)) limparCacheDados();
       set('va_session', sessao);
       return { ok: true, sessao };
     },
-    logout()      { localStorage.removeItem('va_session'); },
+    logout()      { limparCacheDados(); },
     sessaoAtual() { return get('va_session'); },
     exigirPerfil(perfil, url = 'index.html') {
       const s = this.sessaoAtual();
@@ -777,13 +800,17 @@ const DB = (() => {
       }
       const u = rows[0];
       const sessao = { userId: u.id, perfil: u.perfil, nome: u.nome, municipioId: u.municipio_id };
+      // Troca de conta na mesma máquina → limpa o cache do usuário anterior
+      // ANTES do pull, para o novo usuário começar com dados limpos.
+      const anterior = get('va_session');
+      if (anterior && !_mesmoUsuario(anterior, sessao)) limparCacheDados();
       set('va_session', sessao);
       await Sync.pull();               // agora autenticado: baixa os dados
       return { ok: true, sessao };
     },
     async logout() {
-      localStorage.removeItem('va_session');
       try { const cli = Sync.client(); if (cli) await cli.auth.signOut(); } catch (e) {}
+      limparCacheDados();              // esvazia o cache va_ (preserva o lembrete de backup)
     },
   };
 
@@ -799,7 +826,7 @@ const DB = (() => {
   };
 
   _syncRef = Sync;
-  return { Auth, Usuarios, Municipios, Config, Semanas, Feriados, Plano, MunPlano, Sync };
+  return { Auth, Usuarios, Municipios, Config, Semanas, Feriados, Plano, MunPlano, Sync, limparCacheDados };
 })();
 
 // Exposição explícita no window (const de script clássico não vira window.DB sozinho)
