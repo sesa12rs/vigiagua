@@ -1635,7 +1635,7 @@ function renderMunicipios() {
     div.innerHTML = `
       <div>
         <div class="mun-row__nome">${m.nome}</div>
-        <div class="mun-row__sub">Meta: ${m.meta} físico-químicas &nbsp;·&nbsp; ${m.meta*2} amostras</div>
+        <div class="mun-row__sub">Meta: ${m.meta} físico-químicas e ${m.meta} microbiológicas &nbsp;·&nbsp; ${m.meta*2} amostras</div>
       </div>
       <div class="mun-row__right">
         <input type="number" value="${m.meta}" min="1" max="999" style="width:80px;text-align:right;font-weight:700;"
@@ -1699,7 +1699,7 @@ function abrirModalRegras(idx) {
   document.getElementById('modalRegrasTitle').textContent = `Regras — ${m.nome}`;
   document.getElementById('modalRegrasBody').innerHTML = `
     <div style="background:var(--blue-50);border:1px solid var(--blue-200);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.7;">
-      <strong>Meta anual:</strong> ${m.meta} físico-químicas · ${m.meta*2} amostras
+      <strong>Meta anual:</strong> ${m.meta} físico-químicas e ${m.meta} microbiológicas · ${m.meta*2} amostras
       ${sugestao ? `<br><span style="color:var(--green-700);">💡 Para 1×/mês: <strong>${sugestao} frascos/visita</strong> (${m.meta} ÷ 12 = ${sugestao})</span>` : ''}
     </div>
 
@@ -1927,7 +1927,7 @@ function mostrarResultado() {
   if (!planoAtual) return;
   const p    = planoAtual;
   const taxa = (p.taxa * 100).toFixed(1);
-  const isP  = DB.Plano.estaPublicado();
+  const isP  = DB.Plano.estaPublicado(p.cfg.ano);
 
   document.getElementById('secaoResultado').classList.add('visivel');
   document.getElementById('resultadoTitulo').textContent = `Plano ${p.cfg.ano} — ${taxa}% das metas`;

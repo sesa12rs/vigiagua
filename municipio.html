@@ -210,6 +210,11 @@
       cursor: pointer;
     }
 
+    /* "Local de Coleta" (5ª coluna) precisa de largura mínima para ficar
+       legível ao digitar — a tabela rola horizontalmente quando não cabe. */
+    .coleta-table th:nth-child(5),
+    .coleta-table td:nth-child(5) { min-width: 220px; }
+
     .td-id { font-family: monospace; font-size: 11.5px; white-space: nowrap; color: var(--slate-500); }
 
     .crit-header-btn {
@@ -315,6 +320,10 @@
 
     @media (max-width: 768px) {
       .preview-section { padding: 12px; }
+      .doc-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 12px 0 16px; }
+      .doc-table-scroll table.doc-table { margin: 0; font-size: 12px; min-width: 520px; }
+      .preview-section table.doc-table th,
+      .preview-section table.doc-table td { padding: 5px 6px; }
       .stepper { gap: 2px; }
       .step { padding: 6px 10px; font-size: 11.5px; flex: 0 0 auto; white-space: nowrap; }
       #previewToolbar { top: 60px; }

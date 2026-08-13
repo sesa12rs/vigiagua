@@ -1398,7 +1398,10 @@
     table.appendChild(tbody);
 
     item.appendChild(handle);
-    item.appendChild(table);
+    const scrollWrap = document.createElement('div');
+    scrollWrap.className = 'doc-table-scroll';
+    scrollWrap.appendChild(table);
+    item.appendChild(scrollWrap);
     return item;
   }
 
