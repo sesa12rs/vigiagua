@@ -1405,17 +1405,20 @@ function popularSelectMunicipios(id) {
   });
 }
 
+// Popula um <select> de município para feriados: os 21 + Maringá (laboratório).
+function _popularSelectFeriadoMun(id) {
+  popularSelectMunicipios(id);
+  const sel = document.getElementById(id);
+  if (sel && ![...sel.options].some(o => o.value === 'Maringá')) {
+    const o = document.createElement('option');
+    o.value = 'Maringá'; o.textContent = 'Maringá (laboratório)';
+    sel.appendChild(o);
+  }
+}
+
 function renderFeriados() {
-  popularSelectMunicipios('ferMunicipio');
-  popularSelectMunicipios('editFerMunicipio');
-  // Maringá é ponto especial de feriado (laboratório), não é um dos 21 municípios.
-  ['ferMunicipio', 'editFerMunicipio'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel && ![...sel.options].some(o => o.value === 'Maringá')) {
-      const o = document.createElement('option'); o.value = 'Maringá'; o.textContent = 'Maringá (laboratório)';
-      sel.appendChild(o);
-    }
-  });
+  _popularSelectFeriadoMun('ferMunicipio');
+  _popularSelectFeriadoMun('editFerMunicipio');
 
   const list = document.getElementById('feriadosList');
   list.innerHTML = '';
@@ -1537,8 +1540,10 @@ function editarFeriado(tipo, chave, idx) {
   if (!f) return;
   document.getElementById('editFerData').value = `${String(f.dia).padStart(2,'0')}/${String(f.mes).padStart(2,'0')}`;
   document.getElementById('editFerTipo').value  = tipo;
+  const nomeEl = document.getElementById('editFerNome');
+  if (nomeEl) nomeEl.value = f.nome || '';
   if (tipo === 'municipal') {
-    popularSelectMunicipios('editFerMunicipio');
+    _popularSelectFeriadoMun('editFerMunicipio');
     document.getElementById('editFerMunicipio').value = chave;
     document.getElementById('editFerMunGroup').style.display = 'block';
   } else { document.getElementById('editFerMunGroup').style.display = 'none'; }
@@ -1552,6 +1557,8 @@ function salvarEdicaoFeriado() {
   const mun  = document.getElementById('editFerMunicipio').value;
   if (!f) { alert('Data inválida!'); return; }
   if (tipo === 'municipal' && !mun) { alert('Selecione o município!'); return; }
+  const nome = (document.getElementById('editFerNome')?.value || '').trim();
+  if (nome) f.nome = nome;
   removerFeriadoDireto(ferEditRef.tipo, ferEditRef.chave, ferEditRef.idx);
   if (tipo === 'nacional') feriados.nacionais.push(f);
   else if (tipo === 'estadual') feriados.estaduais.push(f);
@@ -1559,7 +1566,10 @@ function salvarEdicaoFeriado() {
   DB.Feriados.salvar(feriados);
   fecharModalFeriado();
   renderFeriados();
-  mostrarToast('✅ Feriado atualizado.');
+  const n = _encaixarFeriadosNasSemanas();
+  mostrarToast(n > 0
+    ? `✅ Feriado atualizado — ${n} semana(s) desativada(s).`
+    : '✅ Feriado atualizado.');
 }
 
 function removerFeriadoDireto(tipo, chave, idx) {
