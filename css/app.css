@@ -492,6 +492,12 @@ input::placeholder { color: var(--slate-400); }
   color: var(--color-text-muted);
   margin-top: 2px;
 }
+.form-hint.tipo-total {
+  color: var(--blue-700);
+  font-weight: 600;
+  margin-top: 4px;
+}
+.form-hint.tipo-total:empty { display: none !important; }
 
 /* ── Tables ─────────────────────────────────── */
 .table-wrapper {

@@ -628,6 +628,14 @@
           O sistema garante automaticamente: <strong id="infoMunAlvo">10 municípios por viagem</strong>, quantidade uniforme por visita, 100% das metas e distribuição equilibrada ao longo do ano. Configure apenas os limites abaixo.
         </div>
 
+        <div style="background:var(--amber-50);border:1px solid var(--amber-200);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:14px;font-size:12.5px;color:var(--amber-800);line-height:1.7;">
+          🧪 <strong>Todos os limites abaixo são "por tipo".</strong> Cada coleta gera uma amostra <strong>Físico-Química</strong> e uma <strong>Microbiológica</strong>, sempre juntas e em igual quantidade. Então uma meta de 72 significa 72 + 72 = 144 amostras; uma capacidade de 55 significa 55 + 55 = 110 análises/semana. Os totais aparecem em azul ao lado de cada campo.
+        </div>
+
+        <div style="background:var(--slate-100);border:1px solid var(--slate-200);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:18px;font-size:12px;color:var(--slate-600);line-height:1.7;">
+          🚚 <strong>Fluxo:</strong> cada município coleta no dia de coleta (após o meio-dia) e entrega até as 17h na 12ª RS de Umuarama, refrigerado. Na manhã seguinte a 12ª RS envia ao laboratório (hoje em Maringá), que analisa em até 24h da coleta. Por isso o dia de coleta/entrega e os feriados de Umuarama e Maringá afetam o calendário.
+        </div>
+
         <!-- Sub-bloco: Dia da semana de Coleta e Entrega -->
         <div class="subsecao">
           <div class="subsecao__cab">
@@ -691,7 +699,7 @@
           <div class="subsecao__cab">
             <span class="subsecao__icone">🧪</span>
             <span class="subsecao__titulo">Capacidade do laboratório / semana</span>
-            <span class="subsecao__hint">amostras físico-químicas que o laboratório processa por semana</span>
+            <span class="subsecao__hint">quantidade <strong>por tipo</strong> que o laboratório processa por semana — vale para Físico-Químicas <strong>e</strong> Microbiológicas</span>
           </div>
           <div class="param-row">
             <label>Modo</label>
@@ -706,7 +714,8 @@
             <label>Número fixo</label>
             <div class="param-control">
               <input type="number" id="cfgCapacidadeExata" min="1" style="width:90px;" placeholder="Sem limite" oninput="renderResumos();">
-              <span class="form-hint">frascos/semana (teto). Deixe vazio para sem limite.</span>
+              <span class="form-hint">por tipo/semana (teto). Deixe vazio para sem limite.</span>
+              <span class="form-hint tipo-total" id="capTotalInfo" style="display:block;"></span>
             </div>
           </div>
           <div id="camposCapIntervalo" class="param-row" style="display:none;">
@@ -715,7 +724,8 @@
               <input type="number" id="cfgCapacidadeMin" min="1" style="width:75px;" placeholder="Mín" oninput="renderResumos();">
               <span style="color:var(--slate-400);">até</span>
               <input type="number" id="cfgCapacidadeMax" min="1" style="width:75px;" placeholder="Máx" oninput="renderResumos();">
-              <span class="form-hint">frascos/semana — o máximo é o teto respeitado pelo sistema</span>
+              <span class="form-hint">por tipo/semana — o máximo é o teto respeitado pelo sistema</span>
+              <span class="form-hint tipo-total" id="capTotalInfoInt" style="display:block;"></span>
             </div>
           </div>
         </div>
@@ -725,7 +735,7 @@
           <div class="subsecao__cab">
             <span class="subsecao__icone">🔔</span>
             <span class="subsecao__titulo">Alerta de frascos / semana</span>
-            <span class="subsecao__hint">avisa se a semana ficar com poucos ou muitos frascos (não altera a geração)</span>
+            <span class="subsecao__hint">avisa se a semana ficar com poucos ou muitos frascos — valor <strong>por tipo</strong> (não altera a geração)</span>
           </div>
           <div class="param-row">
             <label>Modo</label>
@@ -742,8 +752,9 @@
               <span class="form-hint" style="font-weight:400;display:block;">Avisa quando a semana tiver menos frascos que este valor.</span>
             </label>
             <div class="param-control">
-              <input type="number" id="cfgAlertaExata" min="0" style="width:90px;" placeholder="Ex: 48">
-              <span class="form-hint">frascos mínimos/semana</span>
+              <input type="number" id="cfgAlertaExata" min="0" style="width:90px;" placeholder="Ex: 48" oninput="atualizarTotaisPorTipo();">
+              <span class="form-hint">por tipo/semana</span>
+              <span class="form-hint tipo-total" id="alertaTotalInfo" style="display:block;"></span>
             </div>
           </div>
           <div id="camposAlertaIntervalo" class="param-row" style="display:none;">
@@ -752,10 +763,11 @@
               <span class="form-hint" style="font-weight:400;display:block;">Avisa quando a semana ficar abaixo do mínimo (poucos) ou acima do máximo (muitos).</span>
             </label>
             <div class="param-control">
-              <input type="number" id="cfgAlertaMin" min="0" style="width:75px;" placeholder="Mín">
+              <input type="number" id="cfgAlertaMin" min="0" style="width:75px;" placeholder="Mín" oninput="atualizarTotaisPorTipo();">
               <span style="color:var(--slate-400);">até</span>
-              <input type="number" id="cfgAlertaMax" min="0" style="width:75px;" placeholder="Máx">
-              <span class="form-hint">frascos/semana</span>
+              <input type="number" id="cfgAlertaMax" min="0" style="width:75px;" placeholder="Máx" oninput="atualizarTotaisPorTipo();">
+              <span class="form-hint">por tipo/semana</span>
+              <span class="form-hint tipo-total" id="alertaTotalInfoInt" style="display:block;"></span>
             </div>
           </div>
         </div>
@@ -765,7 +777,7 @@
           <div class="subsecao__cab">
             <span class="subsecao__icone">🚐</span>
             <span class="subsecao__titulo">Municípios por semana</span>
-            <span class="subsecao__hint">quantos municípios participam de cada terça-feira</span>
+            <span class="subsecao__hint">quantos municípios participam de cada viagem (dia de coleta)</span>
           </div>
           <div class="param-row">
             <label>Modo</label>
@@ -802,7 +814,7 @@
           <div class="subsecao__cab">
             <span class="subsecao__icone">💧</span>
             <span class="subsecao__titulo">Frascos por município / semana</span>
-            <span class="subsecao__hint">frascos que cada município entrega quando participa</span>
+            <span class="subsecao__hint">quantidade <strong>por tipo</strong> que cada município entrega quando participa (a mesma quantidade de Micro vai junto)</span>
           </div>
           <div class="param-row">
             <label>Modo</label>
@@ -817,7 +829,8 @@
             <label>Quantidade fixa</label>
             <div class="param-control">
               <input type="number" id="cfgEntregaExata" min="1" max="50" style="width:90px;" placeholder="Ex: 5" oninput="renderResumos();">
-              <span class="form-hint">amostras físico-químicas por participação</span>
+              <span class="form-hint">por tipo, por participação</span>
+              <span class="form-hint tipo-total" id="entregaTotalInfo" style="display:block;"></span>
             </div>
           </div>
           <div id="camposEntregaIntervalo" class="param-row">
@@ -829,7 +842,8 @@
               <input type="number" id="cfgEntregaMin" min="1" max="50" style="width:75px;" placeholder="Mín" oninput="renderResumos();">
               <span style="color:var(--slate-400);">até</span>
               <input type="number" id="cfgEntregaMax" min="1" max="50" style="width:75px;" placeholder="Máx" oninput="renderResumos();">
-              <span class="form-hint">amostras físico-químicas</span>
+              <span class="form-hint">por tipo, por participação</span>
+              <span class="form-hint tipo-total" id="entregaTotalInfoInt" style="display:block;"></span>
             </div>
           </div>
         </div>

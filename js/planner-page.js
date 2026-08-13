@@ -191,7 +191,7 @@ function renderAcompanhamento() {
                  border:1px solid var(--slate-200);border-radius:12px;padding:12px 16px;background:#fff;">
       <div style="min-width:200px;">
         <div style="font-weight:700;color:var(--slate-800);">${l.nome}${foraTag}</div>
-        <div style="font-size:12px;color:var(--slate-500);margin-top:2px;">meta anual: ${l.meta} · ${quando}</div>
+        <div style="font-size:12px;color:var(--slate-500);margin-top:2px;">meta anual: ${l.meta} por tipo (${l.meta*2} amostras) · ${quando}</div>
       </div>
       ${prog}
       <span style="background:${b.bg};border:1px solid ${b.bd};color:${b.fg};border-radius:999px;
@@ -255,7 +255,7 @@ function renderLaboratorio() {
   if (totais) {
     totais.innerHTML = `No ano: <strong>${dados.totalAmostrasA}</strong> físico-químicas + <strong>${dados.totalAmostrasA}</strong> microbiológicas = `
       + `<strong>${dados.totalFrascosAno}</strong> amostras · em <strong>${dados.semanas.length}</strong> viagens`
-      + (dados.capacidade != null ? ` · capacidade <strong>${dados.capacidade}</strong>/semana` : '');
+      + (dados.capacidade != null ? ` · capacidade <strong>${dados.capacidade}</strong>/semana por tipo (${dados.capacidade * 2} análises no total)` : '');
   }
 
   renderLabCarga(dados);
@@ -282,7 +282,7 @@ function renderLabCarga(dados) {
   if (cap != null && cap > 0) {
     const yc = yBase - (cap / scaleMax) * chartH;
     svg += `<line x1="${padLeft}" y1="${yc.toFixed(1)}" x2="${W - 4}" y2="${yc.toFixed(1)}" stroke="var(--red-500)" stroke-width="1.5" stroke-dasharray="5 4"/>`;
-    svg += `<text x="${padLeft}" y="${(yc - 4).toFixed(1)}" font-size="10" fill="var(--red-600)" font-weight="700">capacidade ${cap}</text>`;
+    svg += `<text x="${padLeft}" y="${(yc - 4).toFixed(1)}" font-size="10" fill="var(--red-600)" font-weight="700">capacidade ${cap}/tipo</text>`;
   }
   dados.semanas.forEach((s, i) => {
     const x = padLeft + i * (barW + gap);
@@ -372,7 +372,7 @@ function imprimirRomaneio() {
   const d = _labDados;
   let body = `<h1>Romaneio de coletas — 12ª RS · ${d.ano}</h1>`
     + `<p class="sub">Total no ano: <b>${d.totalAmostrasA}</b> físico-químicas + <b>${d.totalAmostrasA}</b> microbiológicas = <b>${d.totalFrascosAno}</b> amostras`
-    + (d.capacidade != null ? ` · capacidade ${d.capacidade}/semana` : '') + `.</p>`;
+    + (d.capacidade != null ? ` · capacidade ${d.capacidade}/semana por tipo (${d.capacidade * 2} no total)` : '') + `.</p>`;
   d.semanas.forEach(s => {
     body += `<div class="viagem"><h2>Semana ${s.semana} — ${s.data.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })}</h2>`
       + `<table><thead><tr><th>Município</th><th>Coletas</th></tr></thead><tbody>`;
@@ -706,7 +706,23 @@ function updateInfoMunAlvo() {
 }
 
 // Atualiza TODOS os resumos de cabeçalho de seção de uma vez
+// Mostra, ao vivo, o total dos dois tipos (FQ + Micro) ao lado dos campos "por tipo".
+function atualizarTotaisPorTipo() {
+  const num = id => { const el = document.getElementById(id); if (!el) return null; const v = parseInt(el.value); return isNaN(v) ? null : v; };
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt || ''; };
+  const fixo = (n, unidade) => n == null ? '' : `= ${n} Físico-Químicas + ${n} Microbiológicas = ${n * 2} ${unidade}`;
+  const faixa = (a, b, unidade) => (a == null || b == null) ? '' : `= ${a * 2} a ${b * 2} ${unidade} no total (os dois tipos somados)`;
+
+  set('capTotalInfo',       fixo(num('cfgCapacidadeExata'), 'análises/semana'));
+  set('capTotalInfoInt',    faixa(num('cfgCapacidadeMin'), num('cfgCapacidadeMax'), 'análises/semana'));
+  set('alertaTotalInfo',    fixo(num('cfgAlertaExata'), 'frascos/semana'));
+  set('alertaTotalInfoInt', faixa(num('cfgAlertaMin'), num('cfgAlertaMax'), 'frascos/semana'));
+  set('entregaTotalInfo',   fixo(num('cfgEntregaExata'), 'amostras'));
+  set('entregaTotalInfoInt', faixa(num('cfgEntregaMin'), num('cfgEntregaMax'), 'amostras'));
+}
+
 function renderResumos() {
+  atualizarTotaisPorTipo();
   // Ano (alimenta o badge da aba — fonte única: cfgAno)
   const ano = parseInt(document.getElementById('cfgAno').value) || 2026;
   document.getElementById('badgePlanejamento').textContent = ano;
@@ -722,7 +738,7 @@ function renderResumos() {
     capacTxt = mx ? `${mn || '?'}–${mx}/sem` : 'sem limite';
   }
   const rRegras = document.getElementById('resumoRegras');
-  if (rRegras) rRegras.textContent = `${textoMunicipios()} · ${textoFrascos()} · lab ${capacTxt}`;
+  if (rRegras) rRegras.textContent = `${textoMunicipios()} · ${textoFrascos()} · lab ${capacTxt} · por tipo`;
 
   // GRUPO C — Calendário (semanas + feriados)
   const ativas  = semanasAtivas.filter(Boolean).length;
@@ -1583,14 +1599,14 @@ function renderMunicipios() {
       <div class="stat-card__value">${municipios.length}</div>
     </div>
     <div class="stat-card stat-card--info">
-      <div class="stat-card__label">Total Físico-Químicas</div>
+      <div class="stat-card__label">Total por tipo</div>
       <div class="stat-card__value">${totalA.toLocaleString('pt-BR')}</div>
-      <div class="stat-card__sub">amostras/ano</div>
+      <div class="stat-card__sub">físico-químicas/ano (= igual de microbiológicas)</div>
     </div>
     <div class="stat-card stat-card--accent">
       <div class="stat-card__label">Total Geral de Amostras</div>
       <div class="stat-card__value">${(totalA*2).toLocaleString('pt-BR')}</div>
-      <div class="stat-card__sub">amostras/ano</div>
+      <div class="stat-card__sub">amostras/ano (FQ + Micro)</div>
     </div>
     <div class="stat-card stat-card--success">
       <div class="stat-card__label">Com regras próprias</div>
