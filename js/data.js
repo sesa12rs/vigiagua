@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v63';
+  window.VIGIAGUA_VERSAO = 'fase2-v64';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -102,27 +102,27 @@ const DB = (() => {
     nacionais: [],   // extras além dos automáticos
     estaduais: [],
     municipais: {
-      'Alto Paraíso':            [{ mes: 5,  dia: 9  }, { mes: 5,  dia: 13 }],
-      'Alto Piquiri':            [{ mes: 3,  dia: 19 }, { mes: 7,  dia: 25 }, { mes: 8,  dia: 15 }],
-      'Altônia':                 [{ mes: 1,  dia: 20 }, { mes: 12, dia: 8  }, { mes: 12, dia: 12 }],
-      'Brasilândia do Sul':      [{ mes: 1,  dia: 1  }, { mes: 6,  dia: 12 }],
-      'Cafezal do Sul':          [{ mes: 6,  dia: 24 }, { mes: 7,  dia: 20 }],
-      'Cruzeiro do Oeste':       [{ mes: 5,  dia: 13 }, { mes: 8,  dia: 12 }, { mes: 8,  dia: 26 }],
-      'Douradina':               [{ mes: 1,  dia: 17 }, { mes: 2,  dia: 1  }],
-      'Esperança Nova':          [{ mes: 6,  dia: 13 }, { mes: 12, dia: 21 }],
-      'Francisco Alves':         [{ mes: 3,  dia: 1  }, { mes: 10, dia: 31 }],
-      'Icaraíma':                [{ mes: 7,  dia: 25 }, { mes: 8,  dia: 15 }],
-      'Iporã':                   [{ mes: 6,  dia: 13 }, { mes: 10, dia: 12 }, { mes: 10, dia: 31 }],
-      'Ivaté':                   [{ mes: 5,  dia: 2  }, { mes: 8,  dia: 15 }],
-      'Maria Helena':            [{ mes: 7,  dia: 25 }, { mes: 8,  dia: 15 }, { mes: 11, dia: 27 }],
-      'Mariluz':                 [{ mes: 6,  dia: 13 }, { mes: 11, dia: 29 }],
-      'Nova Olímpia':            [{ mes: 8,  dia: 6  }, { mes: 11, dia: 13 }, { mes: 12, dia: 8  }],
-      'Perobal':                 [{ mes: 4,  dia: 29 }, { mes: 6,  dia: 26 }, { mes: 6,  dia: 29 }, { mes: 10, dia: 4 }],
-      'Pérola':                  [{ mes: 5,  dia: 13 }, { mes: 9,  dia: 14 }],
-      'São Jorge do Patrocínio': [{ mes: 6,  dia: 22 }, { mes: 8,  dia: 12 }],
-      'Tapira':                  [{ mes: 1,  dia: 20 }, { mes: 2,  dia: 2  }, { mes: 11, dia: 15 }],
-      'Umuarama':                [{ mes: 6,  dia: 26 }, { mes: 8,  dia: 15 }, { mes: 10, dia: 4  }],
-      'Xambrê':                  [{ mes: 7,  dia: 16 }, { mes: 7,  dia: 25 }],
+      'Alto Paraíso':            [{ mes: 5,  dia: 9,  nome: 'Aniversário de Emancipação Política' }, { mes: 5, dia: 13, nome: 'Nossa Senhora de Fátima' }],
+      'Alto Piquiri':            [{ mes: 3,  dia: 19, nome: 'São José (Padroeiro)' }, { mes: 7, dia: 25, nome: 'São Tiago (Dia do Colono / Motorista)' }, { mes: 8, dia: 15, nome: 'Assunção de Nossa Senhora (Padroeira)' }],
+      'Altônia':                 [{ mes: 1,  dia: 20, nome: 'São Sebastião (Padroeiro)' }, { mes: 12, dia: 8, nome: 'Nossa Senhora da Conceição' }, { mes: 12, dia: 12, nome: 'Aniversário de Emancipação Política' }],
+      'Brasilândia do Sul':      [{ mes: 1,  dia: 1,  nome: 'Confraternização Universal / Aniversário da Cidade' }, { mes: 6, dia: 12, nome: 'Aniversário de Emancipação Política' }],
+      'Cafezal do Sul':          [{ mes: 6,  dia: 24, nome: 'São João Batista (Padroeiro)' }, { mes: 7, dia: 20, nome: 'Aniversário de Emancipação Política' }],
+      'Cruzeiro do Oeste':       [{ mes: 5,  dia: 13, nome: 'Nossa Senhora de Fátima (Padroeira)' }, { mes: 8, dia: 12, nome: 'Aniversário de Fundação' }, { mes: 8, dia: 26, nome: 'Aniversário de Emancipação Política' }],
+      'Douradina':               [{ mes: 1,  dia: 17, nome: 'Aniversário de Emancipação Política' }, { mes: 2, dia: 1, nome: 'Padroeiro do Município' }],
+      'Esperança Nova':          [{ mes: 6,  dia: 13, nome: 'Santo Antônio (Padroeiro)' }, { mes: 12, dia: 21, nome: 'Aniversário de Emancipação Política' }],
+      'Francisco Alves':         [{ mes: 3,  dia: 1,  nome: 'Aniversário de Emancipação Política' }, { mes: 10, dia: 31, nome: 'Dia do Evangélico / Fundação' }],
+      'Icaraíma':                [{ mes: 7,  dia: 25, nome: 'São Tiago (Padroeiro)' }, { mes: 8, dia: 15, nome: 'Assunção de Nossa Senhora' }],
+      'Iporã':                   [{ mes: 6,  dia: 13, nome: 'Santo Antônio (Padroeiro)' }, { mes: 10, dia: 12, nome: 'Nossa Senhora Aparecida' }, { mes: 10, dia: 31, nome: 'Dia do Evangélico / Aniversário da Cidade' }],
+      'Ivaté':                   [{ mes: 5,  dia: 2,  nome: 'Aniversário de Emancipação Política' }, { mes: 8, dia: 15, nome: 'Assunção de Nossa Senhora (Padroeira)' }],
+      'Maria Helena':            [{ mes: 7,  dia: 25, nome: 'São Tiago (Padroeiro)' }, { mes: 8, dia: 15, nome: 'Assunção de Nossa Senhora' }, { mes: 11, dia: 27, nome: 'Aniversário de Emancipação Política' }],
+      'Mariluz':                 [{ mes: 6,  dia: 13, nome: 'Santo Antônio (Padroeiro)' }, { mes: 11, dia: 29, nome: 'Aniversário de Emancipação Política' }],
+      'Nova Olímpia':            [{ mes: 8,  dia: 6,  nome: 'Bom Jesus (Padroeiro)' }, { mes: 11, dia: 13, nome: 'Aniversário de Emancipação Política' }, { mes: 12, dia: 8, nome: 'Nossa Senhora da Conceição' }],
+      'Perobal':                 [{ mes: 4,  dia: 29, nome: 'Aniversário de Emancipação Política' }, { mes: 6, dia: 26, nome: 'Data comemorativa local' }, { mes: 6, dia: 29, nome: 'São Pedro e São Paulo' }, { mes: 10, dia: 4, nome: 'São Francisco de Assis (Padroeiro)' }],
+      'Pérola':                  [{ mes: 5,  dia: 13, nome: 'Nossa Senhora de Fátima (Padroeira)' }, { mes: 9, dia: 14, nome: 'Aniversário de Emancipação / Exaltação da Santa Cruz' }],
+      'São Jorge do Patrocínio': [{ mes: 6,  dia: 22, nome: 'Aniversário de Emancipação Política' }, { mes: 8, dia: 12, nome: 'Data comemorativa local / Padroeiro' }],
+      'Tapira':                  [{ mes: 1,  dia: 20, nome: 'São Sebastião' }, { mes: 2, dia: 2, nome: 'Nossa Senhora das Candeias (Padroeira)' }, { mes: 11, dia: 15, nome: 'Proclamação da República / Aniversário da Cidade' }],
+      'Umuarama':                [{ mes: 6,  dia: 26, nome: 'Aniversário de Fundação / Emancipação de Umuarama' }, { mes: 8, dia: 15, nome: 'Assunção de Nossa Senhora (Padroeira)' }, { mes: 10, dia: 4, nome: 'São Francisco de Assis' }],
+      'Xambrê':                  [{ mes: 7,  dia: 16, nome: 'Nossa Senhora do Carmo (Padroeira)' }, { mes: 7, dia: 25, nome: 'São Tiago / Aniversário de Emancipação' }],
       // Maringá NÃO é um dos 21 municípios (não recebe coletas nem conta metas):
       // entra só como ponto de feriado (laboratório). Feriados oficiais da cidade.
       'Maringá':                 [{ mes: 5,  dia: 10, nome: 'Aniversário de Maringá' }, { mes: 8, dia: 15, nome: 'N. Sra. da Glória (Padroeira)' }],
@@ -296,12 +296,26 @@ const DB = (() => {
     carregar() {
       const s = get('va_feriados');
       if (!s) return JSON.parse(JSON.stringify(FERIADOS_PADRAO));
-      // Mescla chaves municipais padrão AUSENTES (ex.: Maringá, adicionado depois)
-      // sem sobrescrever as personalizações do usuário nas chaves já existentes.
+      const padraoMun = FERIADOS_PADRAO.municipais;
+      // Traz chaves municipais padrão AUSENTES (ex.: Maringá) sem sobrescrever
+      // as personalizações do usuário nas chaves já existentes.
       const municipais = {
-        ...JSON.parse(JSON.stringify(FERIADOS_PADRAO.municipais)),
+        ...JSON.parse(JSON.stringify(padraoMun)),
         ...(s.municipais || {}),
       };
+      // Enriquece NOMES por data: se um feriado salvo bate a data de um padrão e
+      // está sem nome, herda o nome oficial — sem alterar datas nem apagar os
+      // feriados personalizados (datas fora do padrão ficam sem nome).
+      Object.keys(padraoMun).forEach(mun => {
+        const lista = municipais[mun];
+        if (!Array.isArray(lista)) return;
+        lista.forEach(f => {
+          if (f && f.nome == null) {
+            const p = padraoMun[mun].find(pp => pp.mes === f.mes && pp.dia === f.dia && pp.nome);
+            if (p) f.nome = p.nome;
+          }
+        });
+      });
       return {
         nacionais:  s.nacionais  || [],
         estaduais:  s.estaduais  || [],
