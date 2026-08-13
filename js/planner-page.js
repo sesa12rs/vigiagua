@@ -755,26 +755,52 @@ function _diaColeta()  { const el = document.getElementById('cfgDiaColeta');  re
 function _diaEntrega() { const el = document.getElementById('cfgDiaEntrega'); return el ? (parseInt(el.value)) : 3; }
 function _offsetEntrega() { return (((_diaEntrega() - _diaColeta()) % 7) + 7) % 7; }
 
+// Lê as caixas de "pontos que paralisam o processo" (Umuarama, Maringá)
+function _lerPontosBloqueio() {
+  const padrao = (DB.Config.PADRAO.pontosBloqueio) || {};
+  const out = {};
+  Object.keys(padrao).forEach(nome => {
+    const c = document.getElementById('cfgBloq_' + nome + '_coleta');
+    const e = document.getElementById('cfgBloq_' + nome + '_entrega');
+    out[nome] = {
+      coleta:  c ? c.checked : padrao[nome].coleta,
+      entrega: e ? e.checked : padrao[nome].entrega,
+    };
+  });
+  return out;
+}
+
 // Trocar o dia de coleta/entrega desloca TODAS as datas → recalcula as semanas.
+// Mudar os PONTOS de bloqueio (Umuarama/Maringá) não muda as datas → aplica o
+// bloqueio de forma conservadora (desativa recém-bloqueadas, preserva o resto).
+function onPontosBloqueioChange() {
+  DB.Config.salvar(lerConfig());              // persiste a marcação ao vivo
+  const n = _encaixarFeriadosNasSemanas();    // desativa recém-bloqueadas
+  renderStatusPlano();
+  mostrarToast(n > 0
+    ? `🛑 Regra aplicada — ${n} semana(s) desativada(s).`
+    : '🛑 Regra de bloqueio atualizada.');
+}
+
+// Trocar dia de coleta/entrega recalcula tudo.
 function onDiaColetaChange() {
   const ano = parseInt(document.getElementById('cfgAno').value) || 2026;
-  tercas = Utils.tercasFeirasDoAno(ano, _diaColeta());
-  inicializarSemanas(true);          // recomputa semanas ativas p/ as novas datas
+  const cfg = lerConfig();             // config AO VIVO (reflete as caixas/selects atuais)
+  DB.Config.salvar(cfg);               // persiste a regra
+  tercas = Utils.tercasFeirasDoAno(ano, cfg.diaColeta);
+  semanasAtivas = calcularSemanasDefault(ano, cfg);
+  DB.Semanas.salvar(ano, semanasAtivas);
   renderSemanasGrid();
   renderStatusPlano();
-  mostrarToast('📅 Dia de coleta/entrega atualizado — semanas recalculadas.');
+  renderResumos();
+  mostrarToast('📅 Regra atualizada — semanas recalculadas.');
 }
 
 function onAnoChange(val) {
   const ano = parseInt(val) || 2026;
   document.getElementById('cfgAno').value = ano;
-  tercas = Utils.tercasFeirasDoAno(ano, _diaColeta());
-  const salvas = DB.Semanas.carregar(ano);
-  semanasAtivas = (salvas && salvas.length === tercas.length)
-    ? salvas
-    : calcularSemanasDefault(ano);
-  DB.Semanas.salvar(ano, semanasAtivas);
-  renderSemanasGrid();
+  renderSemanasGrid();          // inicializarSemanas: reconstrói datas, carrega e aplica bloqueio
+  renderFeriados();             // atualiza o cabeçalho do ano e as datas dos nacionais automáticos
   renderResumos();
   renderPainelPlanos();
   atualizarAnoContexto();
@@ -1111,6 +1137,15 @@ function carregarConfigUI() {
   if (selC) selC.value = String(cfg.diaColeta ?? 2);
   if (selE) selE.value = String(cfg.diaEntrega ?? 3);
 
+  // Pontos que paralisam o processo (Umuarama, Maringá)
+  const pontos = cfg.pontosBloqueio || DB.Config.PADRAO.pontosBloqueio || {};
+  Object.keys(pontos).forEach(nome => {
+    const c = document.getElementById('cfgBloq_' + nome + '_coleta');
+    const e = document.getElementById('cfgBloq_' + nome + '_entrega');
+    if (c) c.checked = !!pontos[nome].coleta;
+    if (e) e.checked = !!pontos[nome].entrega;
+  });
+
   // Capacidade do laboratório / semana (fixo ou intervalo)
   setModoCapacidade(cfg.modoCapacidade || 'exato', true);
   document.getElementById('cfgCapacidadeExata').value = cfg.capacidadeExata ?? '';
@@ -1160,6 +1195,7 @@ function lerConfig() {
 
     diaColeta:       _diaColeta(),
     diaEntrega:      _diaEntrega(),
+    pontosBloqueio:  _lerPontosBloqueio(),
 
     modoCapacidade:  modoC,
     capacidadeExata: capExata,
@@ -1234,12 +1270,13 @@ function setModoAlerta(modo, silencioso = false) {
 /* ════════════════════════════════════════════
    SEMANAS
    ════════════════════════════════════════════ */
-function calcularSemanasDefault(ano) {
-  const t      = Utils.tercasFeirasDoAno(ano, _diaColeta());
-  const ferNac = Utils.feriadosNacionaisAno(ano, feriados.nacionais || []);
-  const a      = t.map(() => true);
+function calcularSemanasDefault(ano, cfg) {
+  cfg = cfg || DB.Config.carregar();
+  const dc  = cfg.diaColeta ?? 2;
+  const t   = Utils.tercasFeirasDoAno(ano, dc);
+  const a   = t.map(() => true);
   Utils.semanasDeFerias(t).forEach(i => { a[i] = false; });
-  Utils.semanasComFeriadoNacQua(t, ferNac, _offsetEntrega()).forEach(i => { a[i] = false; });
+  Utils.calcularSemanasBloqueadas(t, ano, feriados, cfg).forEach(i => { a[i] = false; });
   return a;
 }
 
@@ -1250,6 +1287,11 @@ function inicializarSemanas(forcar = false) {
   semanasAtivas = (salvas && salvas.length === tercas.length && !forcar)
     ? salvas
     : calcularSemanasDefault(ano);
+  // Propagação conservadora: garante que as semanas com feriado que PARALISA o
+  // processo fiquem inativas — em qualquer carregamento (troca de ano, render,
+  // etc.). Só DESATIVA; nunca reativa, preservando ajustes manuais e recesso.
+  Utils.calcularSemanasBloqueadas(tercas, ano, feriados, DB.Config.carregar())
+    .forEach(i => { semanasAtivas[i] = false; });
   DB.Semanas.salvar(ano, semanasAtivas);
 }
 
@@ -1258,6 +1300,10 @@ function renderSemanasGrid() {
   const ativas   = semanasAtivas.filter(Boolean).length;
   const inativas = semanasAtivas.length - ativas;
   const ano      = parseInt(document.getElementById('cfgAno').value) || 2026;
+
+  const DIAS = ['domingos','segundas-feiras','terças-feiras','quartas-feiras','quintas-feiras','sextas-feiras','sábados'];
+  const info = document.getElementById('calendarioDiaInfo');
+  if (info) info.innerHTML = `📅 Coleta às <strong>${DIAS[_diaColeta()]}</strong> · entrega às <strong>${DIAS[_diaEntrega()]}</strong> (definido nas Regras).`;
 
   document.getElementById('semanasResumo').innerHTML = `
     <div class="stat-card stat-card--success">
@@ -1311,13 +1357,13 @@ function reaplicarFerias() {
 }
 
 function ativarSoFeriadosNac() {
-  const ano    = parseInt(document.getElementById('cfgAno').value) || 2026;
-  const ferNac = Utils.feriadosNacionaisAno(ano, feriados.nacionais || []);
+  const ano = parseInt(document.getElementById('cfgAno').value) || 2026;
+  const cfg = DB.Config.carregar();
   semanasAtivas = tercas.map(() => true);
-  Utils.semanasComFeriadoNacQua(tercas, ferNac, _offsetEntrega()).forEach(i => { semanasAtivas[i] = false; });
+  Utils.calcularSemanasBloqueadas(tercas, ano, feriados, cfg).forEach(i => { semanasAtivas[i] = false; });
   DB.Semanas.salvar(ano, semanasAtivas);
   renderSemanasGrid();
-  mostrarToast('🎉 Apenas feriados nacionais bloqueados.');
+  mostrarToast('🎉 Bloqueadas as semanas com feriado que paralisa o processo.');
 }
 
 /* ════════════════════════════════════════════
@@ -1346,6 +1392,14 @@ function popularSelectMunicipios(id) {
 function renderFeriados() {
   popularSelectMunicipios('ferMunicipio');
   popularSelectMunicipios('editFerMunicipio');
+  // Maringá é ponto especial de feriado (laboratório), não é um dos 21 municípios.
+  ['ferMunicipio', 'editFerMunicipio'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel && ![...sel.options].some(o => o.value === 'Maringá')) {
+      const o = document.createElement('option'); o.value = 'Maringá'; o.textContent = 'Maringá (laboratório)';
+      sel.appendChild(o);
+    }
+  });
 
   const list = document.getElementById('feriadosList');
   list.innerHTML = '';
@@ -1379,7 +1433,7 @@ function renderFeriados() {
     list.appendChild(div);
   });
 
-  const fmt = f => `${String(f.dia).padStart(2,'0')}/${String(f.mes).padStart(2,'0')}`;
+  const fmt = f => `${String(f.dia).padStart(2,'0')}/${String(f.mes).padStart(2,'0')}${f.nome ? ' · ' + f.nome : ''}`;
   const temExtras = feriados.nacionais.length || feriados.estaduais.length ||
     Object.values(feriados.municipais || {}).some(v => v.length);
 
@@ -1431,13 +1485,32 @@ function adicionarFeriado() {
   const mun  = document.getElementById('ferMunicipio').value;
   if (!f)                           { alert('Data inválida! Use dd/mm'); return; }
   if (tipo === 'municipal' && !mun) { alert('Selecione o município!');   return; }
+  const nome = (document.getElementById('ferNome')?.value || '').trim();
+  if (nome) f.nome = nome;
   if (tipo === 'nacional') feriados.nacionais.push(f);
   else if (tipo === 'estadual') feriados.estaduais.push(f);
   else { if (!feriados.municipais[mun]) feriados.municipais[mun] = []; feriados.municipais[mun].push(f); }
   DB.Feriados.salvar(feriados);
   document.getElementById('ferData').value = '';
+  if (document.getElementById('ferNome')) document.getElementById('ferNome').value = '';
   renderFeriados();
-  mostrarToast('✅ Feriado adicionado.');
+  const n = _encaixarFeriadosNasSemanas();   // desativa semanas que passaram a ter feriado bloqueante
+  mostrarToast(n > 0
+    ? `✅ Feriado adicionado — ${n} semana(s) desativada(s) automaticamente.`
+    : '✅ Feriado adicionado.');
+}
+
+/* Ao adicionar/editar um feriado, desativa as semanas ativas que passaram a
+   ter um feriado que paralisa o processo (nacional, estadual ou ponto-chave).
+   Não reativa nada (respeita desativações manuais). Retorna quantas desativou. */
+function _encaixarFeriadosNasSemanas() {
+  const ano = parseInt(document.getElementById('cfgAno').value) || 2026;
+  const cfg = DB.Config.carregar();
+  const bloq = Utils.calcularSemanasBloqueadas(tercas, ano, feriados, cfg);
+  let n = 0;
+  bloq.forEach(i => { if (semanasAtivas[i]) { semanasAtivas[i] = false; n++; } });
+  if (n > 0) { DB.Semanas.salvar(ano, semanasAtivas); renderSemanasGrid(); }
+  return n;
 }
 
 function editarFeriado(tipo, chave, idx) {

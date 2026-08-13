@@ -660,6 +660,32 @@
           <p style="margin:10px 0 0;font-size:12px;color:var(--slate-500);">Padrão da 12ª RS: coleta na <strong>terça</strong>, entrega na <strong>quarta</strong>. Mudar o dia recalcula as datas e as semanas — gere o plano de novo para aplicar.</p>
         </div>
 
+        <!-- Sub-bloco: Pontos que paralisam o processo -->
+        <div class="subsecao">
+          <div class="subsecao__cab">
+            <span class="subsecao__icone">🛑</span>
+            <span class="subsecao__titulo">Feriados que paralisam o processo</span>
+            <span class="subsecao__hint">se estes pontos estiverem de feriado, a semana inteira é bloqueada</span>
+          </div>
+          <p style="margin:0 0 10px;font-size:12.5px;color:var(--slate-600);line-height:1.6;">
+            Feriado <strong>nacional</strong> ou <strong>estadual</strong> sempre bloqueia a semana. Além deles, marque abaixo quando o feriado destes pontos-chave também deve bloquear:
+          </p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--color-surface);border:1px solid var(--slate-200);border-radius:8px;padding:10px 14px;">
+              <strong style="min-width:120px;">🏙️ Umuarama</strong>
+              <span style="font-size:12px;color:var(--slate-500);">recebe as coletas dos 21 municípios</span>
+              <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;margin-left:auto;"><input type="checkbox" id="cfgBloq_Umuarama_coleta" onchange="onPontosBloqueioChange()"> no dia de coleta</label>
+              <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="cfgBloq_Umuarama_entrega" onchange="onPontosBloqueioChange()"> no dia de entrega</label>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--color-surface);border:1px solid var(--slate-200);border-radius:8px;padding:10px 14px;">
+              <strong style="min-width:120px;">🔬 Maringá</strong>
+              <span style="font-size:12px;color:var(--slate-500);">cidade do laboratório</span>
+              <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;margin-left:auto;"><input type="checkbox" id="cfgBloq_Maringá_coleta" onchange="onPontosBloqueioChange()"> no dia de coleta</label>
+              <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="checkbox" id="cfgBloq_Maringá_entrega" onchange="onPontosBloqueioChange()"> no dia de entrega</label>
+            </div>
+          </div>
+        </div>
+
         <!-- Sub-bloco: Laboratório -->
         <div class="subsecao">
           <div class="subsecao__cab">
@@ -813,7 +839,7 @@
     </div>
 
     <div id="subCalendario" class="subplan-panel" style="display:none;">
-    <div class="secao" id="secCalendario">
+    <div class="secao aberta" id="secCalendario">
       <div class="secao__header" onclick="toggleSecao('secCalendario')">
         <span class="secao__icone">🗓️</span>
         <div class="secao__titulo">Calendário do Ano</div>
@@ -826,6 +852,7 @@
       <div class="secao__corpo">
         <div style="background:var(--slate-100);border:1px solid var(--slate-200);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:var(--slate-600);line-height:1.6;">
           As <strong>semanas ativas</strong> e os <strong>feriados</strong> definem juntos em quais semanas existe coleta.
+          <span id="calendarioDiaInfo" style="display:block;margin-top:4px;color:var(--slate-500);"></span>
         </div>
 
         <!-- Sub-bloco: Semanas Ativas -->
@@ -876,6 +903,10 @@
             <div class="form-group" id="ferMunGroup" style="display:none;">
               <label>Município</label>
               <select id="ferMunicipio"></select>
+            </div>
+            <div class="form-group" style="flex:1;min-width:150px;">
+              <label>Nome (opcional)</label>
+              <input type="text" id="ferNome" placeholder="ex.: Aniversário da cidade" style="width:100%;">
             </div>
             <div class="form-group">
               <label>&nbsp;</label>

@@ -114,6 +114,39 @@ const Utils = (() => {
     ).filter(i => i >= 0);
   }
 
+  /* ── Semanas INATIVAS por feriado que PARALISA o processo ──
+     Bloqueia a semana se, no dia de coleta OU de entrega, houver:
+       • feriado nacional ou estadual (sempre bloqueiam); ou
+       • feriado de um "ponto de bloqueio" (ex.: Umuarama/Maringá) no dia
+         marcado na configuração (cfg.pontosBloqueio[nome] = {coleta, entrega}). */
+  function calcularSemanasBloqueadas(datasColeta, ano, feriados, cfg) {
+    const off    = offsetEntrega(cfg);
+    const nac    = feriadosNacionaisAno(ano, feriados.nacionais || []);
+    const est    = (feriados.estaduais || []).map(f => new Date(ano, f.mes - 1, f.dia));
+    const pontos = (cfg && cfg.pontosBloqueio) || {};
+    const bate   = (d, alvo) => d.getDate() === alvo.getDate() && d.getMonth() === alvo.getMonth();
+    const bloq   = [];
+    datasColeta.forEach((coleta, i) => {
+      const entrega = _addDays(coleta, off);
+      // Nacional e estadual paralisam quando caem no dia de ENTREGA
+      // (laboratório fechado no recebimento) — mantém a lógica histórica.
+      let block = nac.some(d => bate(d, entrega)) || est.some(d => bate(d, entrega));
+      if (!block) {
+        // Pontos-chave (Umuarama/Maringá): bloqueiam no dia de coleta e/ou de
+        // entrega, conforme marcado na configuração.
+        for (const nome of Object.keys(pontos)) {
+          const p     = pontos[nome] || {};
+          const lista = (feriados.municipais || {})[nome] || [];
+          const emColeta  = lista.some(f => f.mes === coleta.getMonth()  + 1 && f.dia === coleta.getDate());
+          const emEntrega = lista.some(f => f.mes === entrega.getMonth() + 1 && f.dia === entrega.getDate());
+          if ((p.coleta && emColeta) || (p.entrega && emEntrega)) { block = true; break; }
+        }
+      }
+      if (block) bloq.push(i);
+    });
+    return bloq;
+  }
+
   /* ── Período para "1 por mês" (Jan+Dez = 0) ─ */
   function getPeriodo(terca) {
     const mes = terca.getMonth() + 1;
@@ -149,7 +182,7 @@ const Utils = (() => {
   return {
     calcularPascoa, feriadosNacionaisAno, tercasFeirasDoAno, offsetEntrega,
     quartaEhFeriadoNacional, ehFeriadoMunicipal,
-    semanasDeFerias, semanasComFeriadoNacQua, getPeriodo,
+    semanasDeFerias, semanasComFeriadoNacQua, calcularSemanasBloqueadas, getPeriodo,
     fmtData, fmtDataLonga, nomeMes, semanaISO,
     MESES_PT,
   };

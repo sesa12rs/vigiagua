@@ -82,5 +82,47 @@ check('as viagens ativas caíram na segunda-feira',
 check('as viagens ativas (padrão) caíram na terça-feira',
   padrao.plano.semanasAtivasIdx.every(i => padrao.datas[i].getDay() === 2));
 
+console.log('\n[Feriado que paralisa o processo — bloqueio de semana (fatia 5)]');
+{
+  const datas = Utils.tercasFeirasDoAno(ano);           // terças de 2027
+  const cfgBase = { diaColeta: 2, diaEntrega: 3,
+    pontosBloqueio: { 'Umuarama': { coleta: true, entrega: true }, 'Maringá': { coleta: false, entrega: true } } };
+
+  // pega uma terça (coleta) e a quarta (entrega) da mesma semana
+  const iAlvo = 20;
+  const coleta = datas[iAlvo];
+  const entrega = new Date(coleta); entrega.setDate(entrega.getDate() + 1);
+  const dd = d => ({ mes: d.getMonth() + 1, dia: d.getDate() });
+
+  // estadual no dia de entrega → bloqueia
+  let fer = { nacionais: [], estaduais: [dd(entrega)], municipais: {} };
+  check('estadual no dia de entrega bloqueia a semana',
+    Utils.calcularSemanasBloqueadas(datas, ano, fer, cfgBase).includes(iAlvo));
+
+  // Umuarama no dia de coleta → bloqueia (config coleta:true)
+  fer = { nacionais: [], estaduais: [], municipais: { 'Umuarama': [dd(coleta)] } };
+  check('Umuarama no dia de coleta bloqueia (config coleta:true)',
+    Utils.calcularSemanasBloqueadas(datas, ano, fer, cfgBase).includes(iAlvo));
+
+  // Maringá no dia de coleta → NÃO bloqueia (config coleta:false); no de entrega → bloqueia
+  fer = { nacionais: [], estaduais: [], municipais: { 'Maringá': [dd(coleta)] } };
+  check('Maringá no dia de coleta NÃO bloqueia (config coleta:false)',
+    !Utils.calcularSemanasBloqueadas(datas, ano, fer, cfgBase).includes(iAlvo));
+  fer = { nacionais: [], estaduais: [], municipais: { 'Maringá': [dd(entrega)] } };
+  check('Maringá no dia de entrega bloqueia (config entrega:true)',
+    Utils.calcularSemanasBloqueadas(datas, ano, fer, cfgBase).includes(iAlvo));
+
+  // município comum (Altônia) no dia de coleta → NÃO bloqueia a semana (só redistribui na geração)
+  fer = { nacionais: [], estaduais: [], municipais: { 'Altônia': [dd(coleta)] } };
+  check('município comum NÃO bloqueia a semana',
+    !Utils.calcularSemanasBloqueadas(datas, ano, fer, cfgBase).includes(iAlvo));
+
+  // config desmarcada → Umuarama deixa de bloquear
+  const cfgOff = { diaColeta: 2, diaEntrega: 3, pontosBloqueio: { 'Umuarama': { coleta: false, entrega: false } } };
+  fer = { nacionais: [], estaduais: [], municipais: { 'Umuarama': [dd(coleta)] } };
+  check('config desmarcada → Umuarama não bloqueia',
+    !Utils.calcularSemanasBloqueadas(datas, ano, fer, cfgOff).includes(iAlvo));
+}
+
 console.log(fail ? `\n\u274c ${fail} falha(s)` : '\n\u2705 Dia de coleta/entrega OK');
 process.exit(fail ? 1 : 0);

@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v58';
+  window.VIGIAGUA_VERSAO = 'fase2-v61';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -123,6 +123,9 @@ const DB = (() => {
       'Tapira':                  [{ mes: 1,  dia: 20 }, { mes: 2,  dia: 2  }, { mes: 11, dia: 15 }],
       'Umuarama':                [{ mes: 6,  dia: 26 }, { mes: 8,  dia: 15 }, { mes: 10, dia: 4  }],
       'Xambrê':                  [{ mes: 7,  dia: 16 }, { mes: 7,  dia: 25 }],
+      // Maringá NÃO é um dos 21 municípios (não recebe coletas nem conta metas):
+      // entra só como ponto de feriado (laboratório). Feriados oficiais da cidade.
+      'Maringá':                 [{ mes: 5,  dia: 10, nome: 'Aniversário de Maringá' }, { mes: 8, dia: 15, nome: 'N. Sra. da Glória (Padroeira)' }],
     }
   };
 
@@ -140,6 +143,14 @@ const DB = (() => {
     // Padrão: coleta terça (2), entrega quarta (3).
     diaColeta:  2,
     diaEntrega: 3,
+
+    // ── Pontos cujo feriado PARALISA o processo (bloqueia a semana) ──
+    // Nacional e estadual sempre bloqueiam. Estes bloqueiam conforme marcado,
+    // no dia de coleta e/ou de entrega.
+    pontosBloqueio: {
+      'Umuarama': { coleta: true,  entrega: true  },  // recebe as coletas dos 21 municípios
+      'Maringá':  { coleta: false, entrega: true  },  // laboratório (recebe no dia da entrega)
+    },
 
     // ── Capacidade do laboratório (físico-químicas) POR SEMANA ──
     // Restrição real: o teto (exato ou máx) é respeitado pelo nivelamento.
@@ -285,10 +296,16 @@ const DB = (() => {
     carregar() {
       const s = get('va_feriados');
       if (!s) return JSON.parse(JSON.stringify(FERIADOS_PADRAO));
+      // Mescla chaves municipais padrão AUSENTES (ex.: Maringá, adicionado depois)
+      // sem sobrescrever as personalizações do usuário nas chaves já existentes.
+      const municipais = {
+        ...JSON.parse(JSON.stringify(FERIADOS_PADRAO.municipais)),
+        ...(s.municipais || {}),
+      };
       return {
         nacionais:  s.nacionais  || [],
         estaduais:  s.estaduais  || [],
-        municipais: s.municipais || JSON.parse(JSON.stringify(FERIADOS_PADRAO.municipais)),
+        municipais,
       };
     },
     salvar(f)  { set('va_feriados', f); },
