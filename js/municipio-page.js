@@ -261,8 +261,8 @@
   }
 
   function voltarEtapa1()  { salvarPlanoMunicipal(true); ativarEtapa('etapa1', 1); aplicarModoLeitura(); }
-  function voltarEtapa3b() { salvarPlanoMunicipal(true); ativarEtapa('etapa3', 2); }
-  function voltarEtapa3()  { salvarPlanoMunicipal(true); ativarEtapa('etapa3b', 3); }
+  function voltarEtapa3b() { salvarPlanoMunicipal(true); ativarEtapa('etapa3', 2); if (edicaoBloqueada()) travarTabela('corpoTabela'); }
+  function voltarEtapa3()  { salvarPlanoMunicipal(true); ativarEtapa('etapa3b', 3); if (edicaoBloqueada()) travarTabela('corpoTabelaExtras'); }
 
   function irEtapa2() {
     if (!edicaoBloqueada()) {
@@ -564,6 +564,10 @@
     aplicarModoLeitura();
     atualizarBotaoConclusao();
     aplicarModoEdicaoPreview();   // trava a prévia na hora ao concluir (estando na etapa 4)
+    // Trava também as tabelas já geradas (etapas 2/3), para que "Voltar" não
+    // encontre campos editáveis que vazariam para o PDF sem salvar no banco.
+    travarTabela('corpoTabela');
+    travarTabela('corpoTabelaExtras');
   }
 
   function atualizarBotaoConclusao() {
