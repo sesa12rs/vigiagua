@@ -481,14 +481,36 @@
   function irEtapa4() {
     salvarPlanoMunicipal(true);
     gerarPreview();
-    // Etapa 4 é somente-leitura: a edição acontece nas etapas 2 e 3.
-    const preview = document.getElementById('previewContent');
-    if (preview) {
-      preview.querySelectorAll('[contenteditable]').forEach(el => { el.contentEditable = 'false'; });
-      preview.querySelectorAll('.drag-handle').forEach(h => { h.style.display = 'none'; });
-    }
+    aplicarModoEdicaoPreview();
     atualizarBotaoConclusao();
     ativarEtapa('etapa4', 4);
+  }
+
+  // Etapa 4: o TEXTO do documento é editável (títulos, parágrafos, listas) quando
+  // o plano está aberto; as TABELAS de coletas nunca são editáveis aqui (vêm das
+  // etapas 2 e 3). Ao concluir (ou encerrar o prazo), tudo trava e a barra some.
+  function aplicarModoEdicaoPreview() {
+    const preview = document.getElementById('previewContent');
+    if (!preview) return;
+    const editavel = !edicaoBloqueada();
+    // Texto: editável conforme o estado; tabelas: sempre não editáveis.
+    preview.querySelectorAll('.item-editable > [contenteditable]').forEach(el => {
+      const ehTabela = el.tagName === 'TABLE';
+      const val = (editavel && !ehTabela) ? 'true' : 'false';
+      el.contentEditable = val;
+      el.setAttribute('contenteditable', val);
+    });
+    preview.querySelectorAll('.drag-handle').forEach(h => { h.style.display = editavel ? '' : 'none'; });
+    const toolbar = document.getElementById('previewToolbar');
+    if (toolbar) toolbar.style.display = editavel ? '' : 'none';
+    const alerta = document.getElementById('alertaPreviewEdit');
+    if (alerta) {
+      const icon = alerta.querySelector('.alert__icon');
+      if (icon) icon.textContent = editavel ? '✏️' : '👁️';
+      alerta.querySelector('.alert__body').innerHTML = editavel
+        ? 'Você pode <strong>editar o texto</strong> do documento (títulos, parágrafos e listas) pela barra acima. As <strong>tabelas de coletas</strong> vêm das etapas 2 e 3 e não são editadas aqui.'
+        : 'Documento <strong>somente leitura</strong> (plano concluído ou prazo encerrado). Para editar o texto, use <strong>Reabrir para edição</strong>.';
+    }
   }
 
   // Abre um plano já preparado direto na etapa 4 (usado quando está concluído).
@@ -541,6 +563,7 @@
     }
     aplicarModoLeitura();
     atualizarBotaoConclusao();
+    aplicarModoEdicaoPreview();   // trava a prévia na hora ao concluir (estando na etapa 4)
   }
 
   function atualizarBotaoConclusao() {
@@ -1092,10 +1115,12 @@
   }
 
   function restaurarTextoPadrao() {
+    if (edicaoBloqueada()) return;
     if (!confirm('Restaurar o texto padrão? Todas as edições de texto feitas neste plano serão descartadas (as tabelas de coletas não são afetadas).')) return;
     localStorage.removeItem(_previewStorageKey());
     if (typeof DB !== 'undefined' && DB.Sync) DB.Sync.notify(_previewStorageKey());
     gerarPreview();
+    aplicarModoEdicaoPreview();
     mostrarToast('📄 Texto padrão restaurado.');
   }
 
@@ -1311,6 +1336,7 @@
   /* Insere o novo bloco logo APÓS o bloco em que a pessoa estava editando
      (ou no fim, se nenhum estiver ativo), já focado e com o texto selecionado. */
   function _addBloco(tag, conteudo) {
+    if (edicaoBloqueada()) return;
     const preview = document.getElementById('previewContent');
     const item = criarItem(tag, conteudo);
     if (_blocoAtivo && preview.contains(_blocoAtivo)) {
@@ -1333,6 +1359,7 @@
     _agendarSalvarPreview();
   }
   function aplicarFormatacao(cmd) {
+    if (edicaoBloqueada()) return;
     document.execCommand(cmd, false, null);
     _agendarSalvarPreview();
   }
@@ -1387,8 +1414,8 @@
 
     const table = document.createElement('table');
     table.className = 'doc-table';
-    table.contentEditable = 'true';
-    table.setAttribute('contenteditable', 'true');
+    // As tabelas de coletas NÃO são editáveis na prévia — elas refletem as
+    // etapas 2 e 3 e são regeradas a cada visualização (evita divergência com o PDF).
 
     if (caption) {
       const cap = document.createElement('caption');
