@@ -1172,6 +1172,13 @@
         <input type="file" id="backupFile" accept="application/json,.json" style="display:none;" onchange="restaurarBackup(this.files[0]); this.value='';">
         <span id="backupInfo" style="font-size:12.5px;color:var(--slate-500);"></span>
       </div>
+
+      <div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--slate-200);display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+        <span style="font-size:12.5px;color:var(--slate-600);">Exportar só um município:</span>
+        <select id="expMunicipio" style="min-width:200px;"></select>
+        <button class="btn btn--secondary btn--sm" onclick="exportarBackupMunicipio()">📤 Exportar município</button>
+        <span style="font-size:11.5px;color:var(--slate-400);">baixa apenas o plano e as edições daquele município</span>
+      </div>
       <p style="margin:12px 0 0;color:var(--slate-400);font-size:11.5px;">
         A restauração repõe as chaves do arquivo (não apaga o que foi criado depois do backup). Para agendamento automático, veja também os backups no painel do Supabase (documentado em <code>supabase/README-fase2.md</code>).
       </p>
@@ -1230,6 +1237,46 @@
     <div class="modal__footer">
       <button class="btn btn--secondary" onclick="fecharModalFeriado()">Cancelar</button>
       <button class="btn btn--success"   onclick="salvarEdicaoFeriado()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalRestore">
+  <div class="modal modal--lg">
+    <div class="modal__header">
+      <span class="modal__title">♻️ Restaurar backup</span>
+      <button class="modal__close" onclick="fecharModalRestore()">✕</button>
+    </div>
+    <div class="modal__body">
+      <p id="restoreInfo" style="margin:0 0 14px;font-size:13px;color:var(--slate-600);"></p>
+
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:10px 12px;border:1px solid var(--slate-200);border-radius:8px;">
+          <input type="radio" name="restoreEscopo" value="tudo" checked onchange="onRestoreEscopoChange()" style="margin-top:2px;">
+          <span><strong>Restaurar tudo</strong><br><span style="font-size:12px;color:var(--slate-500);">Planejamento + todos os municípios do arquivo.</span></span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:10px 12px;border:1px solid var(--slate-200);border-radius:8px;">
+          <input type="radio" name="restoreEscopo" value="planejamento" onchange="onRestoreEscopoChange()" style="margin-top:2px;">
+          <span><strong>Só o planejamento</strong><br><span style="font-size:12px;color:var(--slate-500);">Configurações, feriados, semanas e planos. Não altera nenhum município.</span></span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:10px 12px;border:1px solid var(--slate-200);border-radius:8px;">
+          <input type="radio" name="restoreEscopo" value="municipios" onchange="onRestoreEscopoChange()" style="margin-top:2px;">
+          <span><strong>Só município(s)</strong><br><span style="font-size:12px;color:var(--slate-500);">Restaura apenas os planos preenchidos dos municípios marcados abaixo.</span></span>
+        </label>
+      </div>
+
+      <div id="restoreMunBox" style="display:none;margin-top:12px;border:1px solid var(--slate-200);border-radius:8px;padding:10px 12px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;margin-bottom:8px;cursor:pointer;">
+          <input type="checkbox" id="restoreMunTodos" onchange="onRestoreMunTodos()"> Selecionar todos
+        </label>
+        <div id="restoreMunList" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto;"></div>
+      </div>
+
+      <p id="restoreResumo" style="margin:14px 0 0;font-size:12.5px;color:var(--blue-700);font-weight:600;"></p>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--secondary" onclick="fecharModalRestore()">Cancelar</button>
+      <button class="btn btn--success"   onclick="confirmarRestore()">♻️ Restaurar</button>
     </div>
   </div>
 </div>

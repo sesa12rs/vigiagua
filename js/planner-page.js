@@ -601,6 +601,37 @@ async function exportarBackup() {
   mostrarToast(`✅ Backup gerado (${res.total} registros).`);
 }
 
+/* ── Classificação de chaves para escopo de restauração ── */
+function _ehChaveMunicipio(k) {
+  return k.startsWith('va_munplano_') || k.startsWith('va_previewedit_');
+}
+function _municipioDaChave(k) {
+  let rest = null;
+  if (k.startsWith('va_munplano_'))    rest = k.slice('va_munplano_'.length);
+  else if (k.startsWith('va_previewedit_')) rest = k.slice('va_previewedit_'.length);
+  if (rest == null) return null;
+  const i = rest.lastIndexOf('_');   // separa o _ANO final (o nome do município nao tem "_")
+  return i > 0 ? rest.slice(0, i) : rest;
+}
+function _municipiosNoBackup(registros) {
+  const set = new Set();
+  Object.keys(registros).forEach(k => { if (_ehChaveMunicipio(k)) { const m = _municipioDaChave(k); if (m) set.add(m); } });
+  return [...set].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+function _filtrarRegistros(registros, escopo, muns) {
+  const out = {};
+  Object.entries(registros).forEach(([k, v]) => {
+    const ehMun = _ehChaveMunicipio(k);
+    if (escopo === 'tudo') out[k] = v;
+    else if (escopo === 'planejamento') { if (!ehMun) out[k] = v; }
+    else if (escopo === 'municipios')   { if (ehMun && muns.includes(_municipioDaChave(k))) out[k] = v; }
+  });
+  return out;
+}
+
+/* ── Restauracao seletiva (abre modal) ── */
+var _restoreRegistros = null, _restoreMeta = null;
+
 async function restaurarBackup(file) {
   if (!file) return;
   let arquivo;
@@ -608,12 +639,71 @@ async function restaurarBackup(file) {
   catch (e) { mostrarToast('⚠️ Arquivo inválido (não é um JSON).'); return; }
   const registros = arquivo && arquivo.registros;
   if (!registros || typeof registros !== 'object') { mostrarToast('⚠️ Este arquivo não é um backup do VigiÁgua.'); return; }
-  const n = Object.keys(registros).length;
-  const quando = arquivo.geradoEm ? new Date(arquivo.geradoEm).toLocaleString('pt-BR') : 'data desconhecida';
-  if (!confirm(`Restaurar ${n} registros do backup de ${quando}?\n\nIsto vai sobrescrever no banco as chaves contidas no arquivo (planos, configuração e os planos preenchidos pelos municípios). O que foi criado depois do backup NÃO é apagado.\n\nDeseja continuar?`)) return;
+  _restoreRegistros = registros;
+  _restoreMeta = {
+    quando: arquivo.geradoEm ? new Date(arquivo.geradoEm).toLocaleString('pt-BR') : 'data desconhecida',
+    total: Object.keys(registros).length,
+  };
+  abrirModalRestore();
+}
+
+function abrirModalRestore() {
+  document.getElementById('restoreInfo').innerHTML =
+    `Arquivo de <strong>${_restoreMeta.quando}</strong> · ${_restoreMeta.total} registro(s). Escolha o que restaurar:`;
+  document.querySelector('input[name="restoreEscopo"][value="tudo"]').checked = true;
+  const muns = _municipiosNoBackup(_restoreRegistros);
+  const lista = document.getElementById('restoreMunList');
+  lista.innerHTML = muns.length
+    ? muns.map(m => {
+        const n = Object.keys(_restoreRegistros).filter(k => _ehChaveMunicipio(k) && _municipioDaChave(k) === m).length;
+        return `<label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+          <input type="checkbox" class="restore-mun-chk" value="${m.replace(/"/g,'&quot;')}" onchange="_atualizarResumoRestore()"> ${m} <span style="color:var(--slate-400);font-size:11.5px;">(${n})</span></label>`;
+      }).join('')
+    : '<span style="font-size:12.5px;color:var(--slate-400);">Nenhum município neste arquivo.</span>';
+  document.getElementById('restoreMunTodos').checked = false;
+  onRestoreEscopoChange();
+  document.getElementById('modalRestore').classList.add('open');
+}
+function fecharModalRestore() { document.getElementById('modalRestore').classList.remove('open'); _restoreRegistros = null; _restoreMeta = null; }
+
+function _escopoRestore() { return (document.querySelector('input[name="restoreEscopo"]:checked') || {}).value || 'tudo'; }
+function _munsMarcados() { return [...document.querySelectorAll('.restore-mun-chk:checked')].map(c => c.value); }
+
+function onRestoreEscopoChange() {
+  document.getElementById('restoreMunBox').style.display = _escopoRestore() === 'municipios' ? '' : 'none';
+  _atualizarResumoRestore();
+}
+function onRestoreMunTodos() {
+  const on = document.getElementById('restoreMunTodos').checked;
+  document.querySelectorAll('.restore-mun-chk').forEach(c => { c.checked = on; });
+  _atualizarResumoRestore();
+}
+function _atualizarResumoRestore() {
+  if (!_restoreRegistros) return;
+  const escopo = _escopoRestore();
+  const filtrado = _filtrarRegistros(_restoreRegistros, escopo, _munsMarcados());
+  const n = Object.keys(filtrado).length;
+  const el = document.getElementById('restoreResumo');
+  if (escopo === 'municipios' && _munsMarcados().length === 0) el.textContent = 'Marque ao menos um município.';
+  else el.textContent = `${n} chave(s) serão restauradas.`;
+}
+
+async function confirmarRestore() {
+  if (!_restoreRegistros) return;
+  const escopo = _escopoRestore();
+  const muns = _munsMarcados();
+  if (escopo === 'municipios' && muns.length === 0) { mostrarToast('⚠️ Marque ao menos um município.'); return; }
+  const filtrado = _filtrarRegistros(_restoreRegistros, escopo, muns);
+  const n = Object.keys(filtrado).length;
+  if (n === 0) { mostrarToast('⚠️ Nada a restaurar com esse escopo.'); return; }
+  const desc = escopo === 'tudo' ? 'tudo (planejamento + municípios)'
+             : escopo === 'planejamento' ? 'apenas o planejamento'
+             : `apenas ${muns.length} município(s)`;
+  if (!confirm(`Restaurar ${n} chave(s) — ${desc}?\n\nIsto sobrescreve no banco as chaves selecionadas. O que foi criado depois do backup NÃO é apagado.`)) return;
+  fecharModalRestore();
   mostrarToast('♻️ Restaurando…');
   let res;
-  try { res = await DB.Sync.importar(registros); }
+  try { res = await DB.Sync.importar(filtrado); }
   catch (e) { mostrarToast('⚠️ Falha ao restaurar: ' + e.message); return; }
   if (!res || !res.ok) { mostrarToast('⚠️ Falha ao restaurar: ' + ((res && (res.erro || (res.erros || []).join('; '))) || 'erro')); return; }
   try { if (DB.Sync.habilitado()) await DB.Sync.pull(); } catch (e) { /* segue com o cache */ }
@@ -622,7 +712,37 @@ async function restaurarBackup(file) {
   mostrarToast(`✅ Restauração concluída (${res.total} registros).`);
 }
 
+/* ── Exportacao por municipio ── */
+async function exportarBackupMunicipio() {
+  const mun = document.getElementById('expMunicipio').value;
+  if (!mun) { mostrarToast('Selecione um município.'); return; }
+  mostrarToast('📤 Preparando…');
+  let res;
+  try { res = await DB.Sync.exportar(); }
+  catch (e) { mostrarToast('⚠️ Falha ao exportar: ' + e.message); return; }
+  if (!res || !res.ok) { mostrarToast('⚠️ Falha ao exportar: ' + ((res && res.erro) || 'erro')); return; }
+  const registros = {};
+  Object.entries(res.registros).forEach(([k, v]) => { if (_ehChaveMunicipio(k) && _municipioDaChave(k) === mun) registros[k] = v; });
+  const n = Object.keys(registros).length;
+  if (n === 0) { mostrarToast(`Nenhum dado salvo para ${mun}.`); return; }
+  const arquivo = {
+    app: 'VigiÁgua', tipo: 'backup-va_store', escopo: 'municipio', municipio: mun,
+    versao: (window.VIGIAGUA_VERSAO || '?'),
+    geradoEm: res.geradoEm, origem: res.origem, total: n, registros,
+  };
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(arquivo, null, 2)], { type: 'application/json' }));
+  a.download = `vigiagua_${mun.replace(/[^\w]+/g, '_')}_${res.geradoEm.slice(0, 10)}.json`;
+  a.click();
+  mostrarToast(`✅ Backup de ${mun} gerado (${n} registros).`);
+}
+
 function _backupInfo() {
+  const sel = document.getElementById('expMunicipio');
+  if (sel && !sel.options.length) {
+    sel.innerHTML = '<option value="">Selecione…</option>' +
+      DB.Municipios.listar().map(m => `<option value="${m.nome.replace(/"/g,'&quot;')}">${m.nome}</option>`).join('');
+  }
   const d = _ultimoBackup();
   const dias = _diasDesde(d);
   const info = document.getElementById('backupInfo');
