@@ -1690,15 +1690,34 @@
 
         if (head.length > 0 && body.length > 0) {
           checkPage();
-          doc.autoTable({
+          const isColetas = head.length === 11;   // ID..Critério (coletas/extras)
+          const optsTabela = {
             startY:          y,
             head:            [head],
             body:            body,
-            styles:          { fontSize: 7, cellPadding: 2, lineColor: [200,200,200], lineWidth: 0.2 },
-            headStyles:      { fillColor: [30,58,138], textColor: 255, fontStyle: 'bold', fontSize: 7.5 },
+            styles:          { fontSize: 7, cellPadding: 2, lineColor: [200,200,200], lineWidth: 0.2, valign: 'middle', overflow: 'linebreak' },
+            headStyles:      { fillColor: [30,58,138], textColor: 255, fontStyle: 'bold', fontSize: 7.5, halign: 'center', valign: 'middle' },
             alternateRowStyles: { fillColor: [248,250,252] },
             margin:          { left: 20, right: 20 },
-          });
+          };
+          if (isColetas) {
+            // Larguras fixas nas colunas estreitas; "Local" (índice 4) fica flexível
+            // e absorve o espaço restante, quebrando o texto quando necessário.
+            optsTabela.columnStyles = {
+              0:  { cellWidth: 20, halign: 'left'   }, // ID
+              1:  { cellWidth: 11, halign: 'center' }, // Sem.
+              2:  { cellWidth: 11, halign: 'center' }, // Nº
+              3:  { cellWidth: 16, halign: 'center' }, // Data
+              4:  { cellWidth: 'auto', halign: 'left' }, // Local
+              5:  { cellWidth: 14, halign: 'center' }, // Sistema
+              6:  { cellWidth: 8,  halign: 'center' }, // MB
+              7:  { cellWidth: 8,  halign: 'center' }, // TB
+              8:  { cellWidth: 8,  halign: 'center' }, // CR
+              9:  { cellWidth: 8,  halign: 'center' }, // FL
+              10: { cellWidth: 14, halign: 'center' }, // Critério
+            };
+          }
+          doc.autoTable(optsTabela);
           y = doc.lastAutoTable.finalY + 6;
         }
       } else {
