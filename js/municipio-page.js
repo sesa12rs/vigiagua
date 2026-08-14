@@ -75,6 +75,15 @@
     // Restaura os campos preenchidos anteriormente (plano municipal salvo)
     restaurarCamposMunicipais();
 
+    // Garante o cronograma/estado do município + ano atuais (o município pode ter
+    // sido definido após o primeiro verificarCronograma), e aplica o travamento.
+    verificarCronograma();
+
+    // Se o plano já está CONCLUÍDO, abre direto na etapa 4 (visualização),
+    // com tudo em somente-leitura. Deferido para depois do módulo terminar de
+    // carregar (init pode rodar antes de todas as consts serem inicializadas).
+    if (statusPlanoAtual() === 'concluido') setTimeout(abrirNaEtapa4, 0);
+
     // Auto-salvamento já na etapa 1 (não só depois de gerar a planilha)
     _ligarAutoSalvarCampos();
 
@@ -209,23 +218,24 @@
    * As tabelas das etapas 3/3b são travadas ao serem geradas.
    */
   function aplicarModoLeitura() {
+    const bloq = edicaoBloqueada();
     const campos = ['populacao','endereco','secretario','responsavel','profissional','vigilancia'];
     campos.forEach(id => {
       const el = document.getElementById(id);
-      if (el) el.disabled = modoLeitura;
+      if (el) el.disabled = bloq;
     });
 
     const btn = document.getElementById('btnProximo');
-    if (btn) btn.innerHTML = modoLeitura ? '👁️ Visualizar plano' : 'Próximo ➜';
+    if (btn) btn.innerHTML = bloq ? '👁️ Visualizar plano' : 'Próximo ➜';
 
     // Botões de coleta extra
     document.querySelectorAll('.btn-add-extra').forEach(b => {
-      b.style.display = modoLeitura ? 'none' : '';
+      b.style.display = bloq ? 'none' : '';
     });
 
     // Alerta de edição da pré-visualização
     const alerta = document.getElementById('alertaPreviewEdit');
-    if (alerta) alerta.style.display = modoLeitura ? 'none' : '';
+    if (alerta) alerta.style.display = bloq ? 'none' : '';
   }
 
   /** Desabilita todos os controles de uma tabela de coletas (consulta). */
@@ -250,12 +260,12 @@
     window.scrollTo(0, 0);
   }
 
-  function voltarEtapa1()  { salvarPlanoMunicipal(true); ativarEtapa('etapa1', 1); }
+  function voltarEtapa1()  { salvarPlanoMunicipal(true); ativarEtapa('etapa1', 1); aplicarModoLeitura(); }
   function voltarEtapa3b() { salvarPlanoMunicipal(true); ativarEtapa('etapa3', 2); }
   function voltarEtapa3()  { salvarPlanoMunicipal(true); ativarEtapa('etapa3b', 3); }
 
   function irEtapa2() {
-    if (!modoLeitura) {
+    if (!edicaoBloqueada()) {
       const obr = ['municipio','ano','populacao','endereco','secretario','responsavel','profissional','vigilancia'];
       let ok = true;
       obr.forEach(id => {
@@ -268,6 +278,9 @@
     gerarPlanilhaDoCronograma();
     restaurarPlanoMunicipal();
     _ligarAutoSalvarPlanoMunicipal();
+    // Re-trava após restaurar: as coletas derivadas são criadas aqui e não
+    // seriam pegas pelo travamento feito durante a geração da planilha.
+    if (edicaoBloqueada()) travarTabela('corpoTabela');
     salvarPlanoMunicipal(true);   // grava já ao avançar (campos + planilha)
   }
 
@@ -284,7 +297,7 @@
   }
 
   function salvarPlanoMunicipal(imediato = false) {
-    if (modoLeitura) return;
+    if (edicaoBloqueada()) return;
     const mun = document.getElementById('municipio')?.value;
     const ano = document.getElementById('ano')?.value;
     if (!mun || !ano) return;
@@ -461,20 +474,26 @@
     salvarPlanoMunicipal(true);
     const mainRows = document.getElementById('corpoTabela')?.querySelectorAll('tr') || [];
     window.baseNumeroExtras = mainRows.length;
-    if (modoLeitura) travarTabela('corpoTabelaExtras');
+    if (edicaoBloqueada()) travarTabela('corpoTabelaExtras');
     ativarEtapa('etapa3b', 3);
   }
 
   function irEtapa4() {
     salvarPlanoMunicipal(true);
     gerarPreview();
-    if (modoLeitura) {
-      const preview = document.getElementById('previewContent');
+    // Etapa 4 é somente-leitura: a edição acontece nas etapas 2 e 3.
+    const preview = document.getElementById('previewContent');
+    if (preview) {
       preview.querySelectorAll('[contenteditable]').forEach(el => { el.contentEditable = 'false'; });
       preview.querySelectorAll('.drag-handle').forEach(h => { h.style.display = 'none'; });
     }
     atualizarBotaoConclusao();
     ativarEtapa('etapa4', 4);
+  }
+
+  // Abre um plano já preparado direto na etapa 4 (usado quando está concluído).
+  function abrirNaEtapa4() {
+    try { irEtapa2(); irEtapa3b(); irEtapa4(); } catch (e) {}
   }
 
   /* ═══════════════════════════════════════════
@@ -495,6 +514,12 @@
     return DB.MunPlano.statusBruto(mun, ano);
   }
 
+  /** Edição bloqueada? Prazo encerrado (trava dura) OU plano concluído
+   *  (trava reversível — destrava ao "Reabrir para edição"). */
+  function edicaoBloqueada() {
+    return modoLeitura || statusPlanoAtual() === 'concluido';
+  }
+
   function alternarConclusao() {
     if (modoLeitura) { mostrarToast('🔒 Prazo de edição encerrado — não é possível alterar o status.'); return; }
     const { mun, ano } = _munIdent();
@@ -504,12 +529,17 @@
     if (statusPlanoAtual() === 'concluido') {
       DB.MunPlano.reabrir(mun, ano);
       if (DB.Sync) DB.Sync.pushAgora(key);
-      mostrarToast('✏️ Plano reaberto para edição.');
+      mostrarToast('✏️ Plano reaberto para edição. Revise os dados e siga pelas etapas.');
+      aplicarModoLeitura();
+      atualizarBotaoConclusao();
+      ativarEtapa('etapa1', 1);      // volta ao início do formulário, agora editável
+      return;
     } else {
       DB.MunPlano.concluir(mun, ano);
       if (DB.Sync) DB.Sync.pushAgora(key);
-      mostrarToast('✅ Plano concluído! A Regional já pode visualizá-lo como pronto.');
+      mostrarToast('✅ Plano concluído! A Regional já pode visualizá-lo como pronto. Para alterar, use "Reabrir para edição".');
     }
+    aplicarModoLeitura();
     atualizarBotaoConclusao();
   }
 
@@ -589,7 +619,7 @@
 
     window.totalColetas = tbody.querySelectorAll('tr').length;
     atualizarIDs();
-    if (modoLeitura) travarTabela('corpoTabela');
+    if (edicaoBloqueada()) travarTabela('corpoTabela');
     ativarEtapa('etapa3', 2);
   }
 
