@@ -1704,7 +1704,7 @@
             // Larguras fixas nas colunas estreitas; "Local" (índice 4) fica flexível
             // e absorve o espaço restante, quebrando o texto quando necessário.
             optsTabela.columnStyles = {
-              0:  { cellWidth: 20, halign: 'left'   }, // ID
+              0:  { cellWidth: 24, halign: 'left'   }, // ID (cabe EX-001UMR2027)
               1:  { cellWidth: 11, halign: 'center' }, // Sem.
               2:  { cellWidth: 11, halign: 'center' }, // Nº
               3:  { cellWidth: 16, halign: 'center' }, // Data
