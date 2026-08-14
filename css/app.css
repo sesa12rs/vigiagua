@@ -499,6 +499,15 @@ input::placeholder { color: var(--slate-400); }
 }
 .form-hint.tipo-total:empty { display: none !important; }
 
+/* Indicador de salvamento automático */
+.autosave-ind {
+  font-size: 12px;
+  color: var(--green-700, #15803d);
+  font-weight: 600;
+  margin: 6px 2px 0;
+  transition: opacity .4s ease;
+}
+
 /* ── Tables ─────────────────────────────────── */
 .table-wrapper {
   overflow-x: auto;

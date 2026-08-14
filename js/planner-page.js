@@ -46,6 +46,14 @@ function init() {
   const anoForm = parseInt(document.getElementById('cfgAno').value) || null;
   planoAtual = anoForm ? DB.Plano.carregar(anoForm) : null;
   if (planoAtual && planoAtual.ok) mostrarResultado();
+
+  // Salvamento automático dos campos de configuração (aba Regras)
+  const painelRegras = document.getElementById('subRegras');
+  if (painelRegras && !painelRegras.dataset.autosave) {
+    painelRegras.dataset.autosave = '1';
+    painelRegras.addEventListener('input',  _agendarSalvarConfig);
+    painelRegras.addEventListener('change', _agendarSalvarConfig);
+  }
 }
 if (DB.Sync.habilitado()) { DB.Sync.ready.then(init); } else { init(); }
 
@@ -1368,7 +1376,37 @@ function parseNum(id) {
 function salvarConfig() {
   DB.Config.salvar(lerConfig());
   renderResumos();
-  mostrarToast('✅ Configurações salvas!');
+}
+function salvarMetas() { DB.Municipios.salvar(municipios); }
+
+/* ── Salvamento automático dos campos (config e metas) ── */
+var _salvarConfigTimer = null, _salvarMetasTimer = null, _autoSaveHideTimer = null;
+
+function _mostrarSalvando() {
+  const el = document.getElementById('autoSaveInd');
+  if (!el) return;
+  clearTimeout(_autoSaveHideTimer);
+  el.textContent = '⏳ salvando…';
+  el.style.display = ''; el.style.opacity = '1';
+}
+function _mostrarSalvo() {
+  const el = document.getElementById('autoSaveInd');
+  if (!el) return;
+  el.textContent = '✓ salvo';
+  el.style.opacity = '1';
+  clearTimeout(_autoSaveHideTimer);
+  _autoSaveHideTimer = setTimeout(() => { el.style.opacity = '0'; }, 1600);
+}
+function _agendarSalvarConfig() {
+  _mostrarSalvando();
+  clearTimeout(_salvarConfigTimer);
+  _salvarConfigTimer = setTimeout(() => { salvarConfig(); _mostrarSalvo(); }, 600);
+}
+function _flushSalvarConfig() { clearTimeout(_salvarConfigTimer); salvarConfig(); }
+function _agendarSalvarMetas() {
+  _mostrarSalvando();
+  clearTimeout(_salvarMetasTimer);
+  _salvarMetasTimer = setTimeout(() => { salvarMetas(); _mostrarSalvo(); }, 600);
 }
 
 function setModoEntrega(modo, silencioso = false) {
@@ -1376,7 +1414,7 @@ function setModoEntrega(modo, silencioso = false) {
   document.getElementById('btnEntregaIntervalo').classList.toggle('ativo', modo === 'intervalo');
   document.getElementById('camposEntregaExato').style.display    = modo === 'exato'    ? 'flex' : 'none';
   document.getElementById('camposEntregaIntervalo').style.display = modo === 'intervalo'? 'flex' : 'none';
-  if (!silencioso) renderResumos();
+  if (!silencioso) { renderResumos(); _agendarSalvarConfig(); }
 }
 
 function setModoMuns(modo, silencioso = false) {
@@ -1384,7 +1422,7 @@ function setModoMuns(modo, silencioso = false) {
   document.getElementById('btnMunsIntervalo').classList.toggle('ativo', modo === 'intervalo');
   document.getElementById('camposMunsExato').style.display    = modo === 'exato'    ? 'flex' : 'none';
   document.getElementById('camposMunsIntervalo').style.display = modo === 'intervalo'? 'flex' : 'none';
-  if (!silencioso) renderResumos();
+  if (!silencioso) { renderResumos(); _agendarSalvarConfig(); }
 }
 
 function setModoCapacidade(modo, silencioso = false) {
@@ -1392,7 +1430,7 @@ function setModoCapacidade(modo, silencioso = false) {
   document.getElementById('btnCapIntervalo').classList.toggle('ativo', modo === 'intervalo');
   document.getElementById('camposCapExato').style.display     = modo === 'exato'    ? 'flex' : 'none';
   document.getElementById('camposCapIntervalo').style.display = modo === 'intervalo'? 'flex' : 'none';
-  if (!silencioso) renderResumos();
+  if (!silencioso) { renderResumos(); _agendarSalvarConfig(); }
 }
 
 function setModoAlerta(modo, silencioso = false) {
@@ -1400,7 +1438,7 @@ function setModoAlerta(modo, silencioso = false) {
   document.getElementById('btnAlertaIntervalo').classList.toggle('ativo', modo === 'intervalo');
   document.getElementById('camposAlertaExato').style.display     = modo === 'exato'    ? 'flex' : 'none';
   document.getElementById('camposAlertaIntervalo').style.display = modo === 'intervalo'? 'flex' : 'none';
-  if (!silencioso) renderResumos();
+  if (!silencioso) { renderResumos(); _agendarSalvarConfig(); }
 }
 
 /* ════════════════════════════════════════════
@@ -1721,6 +1759,12 @@ function fecharModalFeriado() {
 /* ════════════════════════════════════════════
    MUNICÍPIOS / METAS
    ════════════════════════════════════════════ */
+function onMetaChange(i, valor) {
+  municipios[i].meta = Math.max(1, parseInt(valor) || 0);
+  _agendarSalvarMetas();
+  renderMunicipios();
+}
+
 function renderMunicipios() {
   const totalA = municipios.reduce((s, m) => s + m.meta, 0);
   document.getElementById('metaStats').innerHTML = `
@@ -1760,7 +1804,7 @@ function renderMunicipios() {
       <div class="mun-row__right">
         <input type="number" value="${m.meta}" min="1" max="999" style="width:80px;text-align:right;font-weight:700;"
           onclick="event.stopPropagation()"
-          onchange="event.stopPropagation(); municipios[${i}].meta = Math.max(1, parseInt(this.value)||0); renderMunicipios();">
+          onchange="event.stopPropagation(); onMetaChange(${i}, this.value)">
         <div>${badges}</div>
       </div>
     `;
@@ -1800,6 +1844,7 @@ function resetarMetas() {
   if (!confirm('Restaurar metas e regras padrão?')) return;
   DB.Municipios.resetar();
   municipios = DB.Municipios.listar();
+  salvarMetas();
   renderMunicipios();
   mostrarToast('🔄 Metas restauradas.');
 }
@@ -1965,6 +2010,7 @@ function fecharModalRegras() {
    ════════════════════════════════════════════ */
 function gerarPlano() {
   const cfg = lerConfig();
+  _flushSalvarConfig();   // garante a config gravada antes de gerar (não depende do atraso)
 
   // Se o ano já está publicado, avisar que será atualizado mantendo a publicação.
   const eraPublicado = DB.Plano.estaPublicado(cfg.ano);

@@ -611,6 +611,7 @@
       <button id="subBtnMunicipios" class="subplan-tab" onclick="trocarSubPlan('Municipios')">🏘️ Municípios</button>
       <button id="subBtnGerar"      class="subplan-tab active" onclick="trocarSubPlan('Gerar')">🚀 Gerar plano</button>
     </nav>
+    <div id="autoSaveInd" class="autosave-ind" style="display:none;"></div>
 
     <div id="subRegras" class="subplan-panel" style="display:none;">
     <div class="secao aberta" id="secRegras">
@@ -944,7 +945,6 @@
       <h2 class="section-header__title">🏘️ Metas e Regras por Município</h2>
       <div class="section-header__actions">
         <button class="btn btn--secondary btn--sm" onclick="resetarMetas()">🔄 Restaurar padrão</button>
-        <button class="btn btn--success btn--sm"   onclick="salvarMetas()">💾 Salvar</button>
       </div>
     </div>
 
@@ -965,9 +965,8 @@
 
     <div id="subGerar" class="subplan-panel">
       <div class="card" style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-        <button class="btn btn--secondary" onclick="salvarConfig()">💾 Salvar configuração</button>
         <button class="btn btn--primary btn--lg" onclick="gerarPlano()">🚀 Gerar Plano</button>
-        <span style="font-size:12.5px;color:var(--slate-500);">Salva as regras e gera o plano do ano selecionado no topo.</span>
+        <span style="font-size:12.5px;color:var(--slate-500);">As regras são salvas automaticamente. Gera o plano do ano selecionado no topo.</span>
       </div>
     <div id="secaoResultado">
     <div class="resultado-header" id="resultadoHeader">
