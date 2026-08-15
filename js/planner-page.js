@@ -204,6 +204,8 @@ function renderAcompanhamento() {
       ${prog}
       <span style="background:${b.bg};border:1px solid ${b.bd};color:${b.fg};border-radius:999px;
                    padding:5px 12px;font-size:12.5px;font-weight:700;white-space:nowrap;">${b.txt}</span>
+      <a href="municipio.html?municipio=${encodeURIComponent(l.nome)}" class="btn btn--secondary btn--sm"
+         style="text-decoration:none;white-space:nowrap;">Abrir plano ↗</a>
     </div>`;
   });
   html += `</div>`;

@@ -165,7 +165,14 @@
       <div class="login-error" id="loginError"></div>
 
       <div class="login-form">
-        <div class="form-group">
+        <div class="form-group" id="grpSeletor">
+          <label for="loginSel">Quem está entrando</label>
+          <div class="input-icon-wrap">
+            <span class="input-icon">🏢</span>
+            <select id="loginSel"></select>
+          </div>
+        </div>
+        <div class="form-group" id="grpEmail" style="display:none;">
           <label for="email">E-mail</label>
           <div class="input-icon-wrap">
             <span class="input-icon">✉️</span>
@@ -182,20 +189,8 @@
         <button class="btn btn--primary login-btn" id="btnLogin" onclick="fazerLogin()">
           Entrar
         </button>
-      </div>
-
-      <div class="login-demo">
-        <div class="login-demo__title">Acesso rápido (demonstração)</div>
-        <div>
-          <span class="demo-chip" onclick="preencherDemo('regional')">
-            <span class="chip-icon">🏛️</span> Regional
-          </span>
-          <span class="demo-chip" onclick="preencherDemo('umuarama')">
-            <span class="chip-icon">🏘️</span> Umuarama
-          </span>
-          <span class="demo-chip" onclick="preencherDemo('altonia')">
-            <span class="chip-icon">🏘️</span> Altônia
-          </span>
+        <div style="text-align:center;margin-top:10px;">
+          <a href="#" id="toggleLoginModo" onclick="alternarModoLogin(event)" style="font-size:12.5px;color:var(--blue-700);text-decoration:none;">entrar com e-mail</a>
         </div>
       </div>
     </div>
@@ -214,14 +209,14 @@
     if (s) redirectPerfil(s.perfil);
 
     async function fazerLogin() {
-      const email = document.getElementById('email').value.trim();
+      const email = _emailLogin();
       const senha = document.getElementById('senha').value;
       const err   = document.getElementById('loginError');
 
       err.classList.remove('show');
 
       if (!email || !senha) {
-        err.textContent = 'Preencha e-mail e senha.';
+        err.textContent = _modoEmail ? 'Preencha e-mail e senha.' : 'Selecione quem está entrando e digite a senha.';
         err.classList.add('show');
         return;
       }
@@ -244,17 +239,37 @@
       window.location.href = perfil === 'regional' ? 'planner.html' : 'municipio.html';
     }
 
-    function preencherDemo(tipo) {
-      const demos = {
-        regional: { email: 'regional@vigiagua.pr.gov.br', senha: 'regional123' },
-        umuarama: { email: 'umuarama@vigiagua.pr.gov.br', senha: 'municipio123' },
-        altonia:  { email: 'altonia@vigiagua.pr.gov.br',  senha: 'municipio123' },
-      };
-      const d = demos[tipo];
-      if (d) {
-        document.getElementById('email').value = d.email;
-        document.getElementById('senha').value = d.senha;
-      }
+    // ── Seletor de perfil → e-mail (regra: minúsculo, sem acento, sem espaço) ──
+    function _emailDoNome(nome) {
+      return nome.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // remove acentos
+        .replace(/[^a-z0-9]/g, '')                          // remove espaços/símbolos
+        + '@vigiagua.pr.gov.br';
+    }
+    function popularSeletorLogin() {
+      const sel = document.getElementById('loginSel');
+      if (!sel) return;
+      let html = '<option value="regional@vigiagua.pr.gov.br">🏛️ 12ª Regional de Saúde</option>';
+      DB.Municipios.listar().forEach(m => {
+        html += `<option value="${_emailDoNome(m.nome)}">🏘️ ${m.nome}</option>`;
+      });
+      sel.innerHTML = html;
+    }
+    popularSeletorLogin();
+
+    var _modoEmail = false;
+    function alternarModoLogin(e) {
+      if (e) e.preventDefault();
+      _modoEmail = !_modoEmail;
+      document.getElementById('grpSeletor').style.display = _modoEmail ? 'none' : '';
+      document.getElementById('grpEmail').style.display   = _modoEmail ? '' : 'none';
+      document.getElementById('toggleLoginModo').textContent = _modoEmail ? 'entrar selecionando o município' : 'entrar com e-mail';
+      if (_modoEmail) document.getElementById('email').focus();
+    }
+    function _emailLogin() {
+      return _modoEmail
+        ? document.getElementById('email').value.trim()
+        : document.getElementById('loginSel').value;
     }
 
     // Enter para logar

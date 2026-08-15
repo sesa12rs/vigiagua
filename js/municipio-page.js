@@ -72,6 +72,19 @@
       }
     }
 
+    // A Regional pode entrar direto num município pelo atalho do planner
+    // (municipio.html?municipio=Nome). O seletor continua aberto para ela.
+    if (sessao.perfil === 'regional') {
+      const alvo = new URLSearchParams(location.search).get('municipio');
+      if (alvo) {
+        const sel = document.getElementById('municipio');
+        if ([...sel.options].some(o => o.value === alvo)) {
+          sel.value = alvo;
+          onMunicipioChange();
+        }
+      }
+    }
+
     // Restaura os campos preenchidos anteriormente (plano municipal salvo)
     restaurarCamposMunicipais();
 
