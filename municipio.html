@@ -6,6 +6,7 @@
   <title>VigiÁgua — Plano de Amostragem</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <link rel="stylesheet" href="css/app.css">
   <style>
@@ -537,6 +538,7 @@
           <button class="btn btn--secondary btn--sm" onclick="voltarEtapa3()">← Voltar</button>
           <button class="btn btn--success btn--sm" id="btnConcluir" onclick="alternarConclusao()">✓ Concluir plano</button>
           <button class="btn btn--primary" onclick="gerarPDF()">⬇️ Baixar PDF</button>
+          <button class="btn btn--secondary" onclick="gerarDOCX()">⬇️ Baixar Word (.docx)</button>
         </div>
       </div>
 
@@ -568,6 +570,7 @@
       <div class="btn-group" style="justify-content:center;margin-top:20px;">
         <button class="btn btn--secondary" onclick="voltarEtapa3()">← Voltar</button>
         <button class="btn btn--primary btn--lg" onclick="gerarPDF()">⬇️ Baixar PDF</button>
+        <button class="btn btn--secondary btn--lg" onclick="gerarDOCX()">⬇️ Baixar Word (.docx)</button>
       </div>
     </div>
 

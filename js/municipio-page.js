@@ -1754,6 +1754,103 @@
   }
 
   /* ═══════════════════════════════════════════
+     GERAÇÃO DO WORD (.docx) — mesmo conteúdo da prévia, editável.
+     Não é idêntico ao PDF (o Word reflui), mas mantém estrutura e alinhamento.
+     ═══════════════════════════════════════════ */
+  function _construirDocx(preview) {
+    const D = (typeof window !== 'undefined' && window.docx) ? window.docx : (typeof docx !== 'undefined' ? docx : null);
+    if (!D) return null;
+    const { Document, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, ShadingType, TableLayoutType, BorderStyle } = D;
+    const AZUL = '1E3A8A', ZEBRA = 'F8FAFC', BORDA = 'C8C8C8';
+
+    // Extrai "runs" preservando negrito/itálico/sublinhado dos filhos do bloco.
+    function runs(node) {
+      const out = [];
+      (function walk(n, est) {
+        Array.from(n.childNodes).forEach(ch => {
+          if (ch.nodeType === 3) {
+            if (ch.nodeValue) out.push(new TextRun({ text: ch.nodeValue, bold: est.b, italics: est.i, underline: est.u ? {} : undefined }));
+          } else if (ch.nodeType === 1) {
+            const t = ch.tagName;
+            if (t === 'BR') { out.push(new TextRun({ break: 1 })); return; }
+            walk(ch, { b: est.b || t === 'B' || t === 'STRONG', i: est.i || t === 'I' || t === 'EM', u: est.u || t === 'U' });
+          }
+        });
+      })(node, { b: false, i: false, u: false });
+      return out.length ? out : [new TextRun({ text: '' })];
+    }
+
+    function celula(text, o) {
+      o = o || {};
+      return new TableCell({
+        shading: o.header ? { fill: AZUL, type: ShadingType.CLEAR, color: 'auto' } : (o.zebra ? { fill: ZEBRA, type: ShadingType.CLEAR, color: 'auto' } : undefined),
+        margins: { top: 40, bottom: 40, left: 60, right: 60 },
+        children: [new Paragraph({
+          alignment: o.align === 'left' ? AlignmentType.LEFT : AlignmentType.CENTER,
+          children: [new TextRun({ text: String(text), bold: !!o.header, color: o.header ? 'FFFFFF' : '000000', size: o.header ? 15 : 14 })],
+        })],
+      });
+    }
+
+    function tabela(head, body) {
+      const isColetas = head.length === 11;
+      const W = isColetas ? [1500, 600, 650, 950, 2757, 900, 470, 470, 470, 470, 969] : [1600, 8606];
+      const b = (c) => ({ style: BorderStyle.SINGLE, size: 2, color: c });
+      const bordas = { top: b(BORDA), bottom: b(BORDA), left: b(BORDA), right: b(BORDA), insideHorizontal: b(BORDA), insideVertical: b(BORDA) };
+      const rows = [new TableRow({ tableHeader: true, children: head.map(h => celula(h, { header: true })) })];
+      body.forEach((r, ri) => rows.push(new TableRow({
+        children: r.map((c, ci) => celula(c, { align: ((isColetas && ci === 4) || (!isColetas && ci === 1)) ? 'left' : 'center', zebra: ri % 2 === 1 })),
+      })));
+      const total = W.reduce((a, x) => a + x, 0);
+      return new Table({ layout: TableLayoutType.FIXED, columnWidths: W, width: { size: total, type: WidthType.DXA }, borders: bordas, rows });
+    }
+
+    const children = [];
+    Array.from(preview.querySelectorAll('.item-editable')).forEach(item => {
+      const el = item.querySelector('h1, h2, h3, p, ul, table');
+      if (!el) return;
+      if (el.tagName !== 'TABLE' && !(el.textContent || '').trim()) return;
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'h1') children.push(new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: el.textContent, bold: true, size: 28 })] }));
+      else if (tag === 'h2') children.push(new Paragraph({ spacing: { before: 160, after: 60 }, children: [new TextRun({ text: el.textContent, bold: true, color: AZUL, size: 22 })] }));
+      else if (tag === 'h3') children.push(new Paragraph({ spacing: { before: 80, after: 40 }, children: [new TextRun({ text: el.textContent, bold: true, size: 20 })] }));
+      else if (tag === 'p') children.push(new Paragraph({ spacing: { after: 60 }, alignment: AlignmentType.JUSTIFIED, children: runs(el) }));
+      else if (tag === 'ul') Array.from(el.querySelectorAll('li')).forEach(li => { if ((li.textContent || '').trim()) children.push(new Paragraph({ bullet: { level: 0 }, children: runs(li) })); });
+      else if (tag === 'table') {
+        const head = Array.from(el.querySelectorAll('thead th')).map(th => th.textContent || '');
+        const body = Array.from(el.querySelectorAll('tbody tr')).map(tr => Array.from(tr.querySelectorAll('td')).map(td => (td.textContent || '').replace(/\u2713/g, 'X')));
+        const cap = el.querySelector('caption') ? el.querySelector('caption').textContent : '';
+        if (cap) children.push(new Paragraph({ spacing: { before: 120, after: 40 }, children: [new TextRun({ text: cap, bold: true, size: 18 })] }));
+        if (head.length && body.length) { children.push(tabela(head, body)); children.push(new Paragraph({ text: '' })); }
+      }
+    });
+
+    return new Document({
+      styles: { default: { document: { run: { font: 'Arial' } } } },
+      sections: [{ properties: { page: { margin: { top: 850, right: 850, bottom: 850, left: 850 } } }, children }],
+    });
+  }
+
+  async function gerarDOCX() {
+    const preview = document.getElementById('previewContent');
+    if (!preview) return;
+    if (typeof window === 'undefined' || !window.docx) { mostrarToast('⚠️ A biblioteca do Word ainda está carregando. Tente novamente em instantes.'); return; }
+    let doc;
+    try { doc = _construirDocx(preview); } catch (e) { mostrarToast('⚠️ Falha ao montar o Word: ' + e.message); return; }
+    if (!doc) { mostrarToast('⚠️ Biblioteca do Word indisponível.'); return; }
+    const municipio = document.getElementById('municipio').value || '';
+    const ano = document.getElementById('ano').value || '';
+    try {
+      const blob = await window.docx.Packer.toBlob(doc);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `PlanoAmostragem_${municipio.replace(/\s+/g, '_')}_${ano}.docx`;
+      a.click();
+      mostrarToast('⬇️ Word (.docx) gerado.');
+    } catch (e) { mostrarToast('⚠️ Falha ao gerar o Word: ' + e.message); }
+  }
+
+  /* ═══════════════════════════════════════════
      AUTH
      ═══════════════════════════════════════════ */
   function sair() { DB.Auth.logoutAsync().finally(() => { window.location.href = 'index.html'; }); }
