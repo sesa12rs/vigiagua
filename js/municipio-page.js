@@ -1318,12 +1318,16 @@
     addItem('p', 'BRASIL. Ministério da Saúde. Inspeção sanitária em abastecimento de água, 2006.');
     addItem('p', 'BRASIL. Ministério da Saúde. Diretriz nacional do plano de amostragem da vigilância ambiental em saúde relacionada à qualidade da água para consumo humano, 2016.');
 
-    // Assinatura
-    addItem('p', `Data de elaboração: ${new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' })}`);
-    addItem('p', '__________________________________________');
-    addItem('p', `${secretario}`);
+    // Assinaturas (espaço para assinar acima de cada linha — padrão do documento oficial)
+    addItem('p', `${municipio} — PR, ${new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' })}.`);
+    addItem('p', '<br><br>__________________________________________');
+    if (secretario) addItem('p', `<b>${secretario}</b>`);
     addItem('p', 'Secretário(a) Municipal de Saúde');
     addItem('p', `${municipio} — PR`);
+    addItem('p', '<br><br>__________________________________________');
+    if (responsavel) addItem('p', `<b>${responsavel}</b>`);
+    addItem('p', `${vigilancia || 'Vigilância Sanitária'}`);
+    addItem('p', 'Responsável pela elaboração e implementação do plano');
 
     _initPreviewEdicao(preview);
   }
@@ -1760,7 +1764,7 @@
   function _construirDocx(preview) {
     const D = (typeof window !== 'undefined' && window.docx) ? window.docx : (typeof docx !== 'undefined' ? docx : null);
     if (!D) return null;
-    const { Document, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, ShadingType, TableLayoutType, BorderStyle } = D;
+    const { Document, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, ShadingType, TableLayoutType, BorderStyle, PageBreak } = D;
     const AZUL = '1E3A8A', ZEBRA = 'F8FAFC', BORDA = 'C8C8C8';
 
     // Extrai "runs" preservando negrito/itálico/sublinhado dos filhos do bloco.
@@ -1806,6 +1810,23 @@
     }
 
     const children = [];
+
+    // ── CAPA (página 1) — mesmo padrão do PDF ──
+    const _mun = (document.getElementById('municipio') || {}).value || '';
+    const _ano = (document.getElementById('ano') || {}).value || '';
+    const _vig = (document.getElementById('vigilancia') || {}).value || 'Vigilância Sanitária';
+    const cen = AlignmentType.CENTER;
+    children.push(
+      new Paragraph({ alignment: cen, spacing: { before: 1400, after: 0 }, children: [new TextRun({ text: `PREFEITURA MUNICIPAL DE ${_mun.toUpperCase()}`, bold: true, size: 28 })] }),
+      new Paragraph({ alignment: cen, spacing: { before: 60 }, children: [new TextRun({ text: 'Secretaria Municipal de Saúde', size: 24 })] }),
+      new Paragraph({ alignment: cen, children: [new TextRun({ text: _vig, size: 24 })] }),
+      new Paragraph({ alignment: cen, spacing: { before: 2600, after: 0 }, children: [new TextRun({ text: 'Plano de Amostragem de Vigilância da', bold: true, size: 32 })] }),
+      new Paragraph({ alignment: cen, children: [new TextRun({ text: 'Qualidade da Água para Consumo Humano', bold: true, size: 32 })] }),
+      new Paragraph({ alignment: cen, spacing: { before: 2600, after: 0 }, children: [new TextRun({ text: `Ano: ${_ano}`, size: 24 })] }),
+      new Paragraph({ alignment: cen, spacing: { before: 60 }, children: [new TextRun({ text: `Município: ${_mun}`, size: 24 })] }),
+      new Paragraph({ alignment: cen, spacing: { before: 60 }, children: [new TextRun({ text: 'Regional de Saúde: 12ª', size: 24 })] }),
+      new Paragraph({ children: [new PageBreak()] }),
+    );
     Array.from(preview.querySelectorAll('.item-editable')).forEach(item => {
       const el = item.querySelector('h1, h2, h3, p, ul, table');
       if (!el) return;
