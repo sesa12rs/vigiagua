@@ -513,7 +513,7 @@
       el.contentEditable = val;
       el.setAttribute('contenteditable', val);
     });
-    preview.querySelectorAll('.drag-handle').forEach(h => { h.style.display = editavel ? '' : 'none'; });
+    preview.querySelectorAll('.drag-handle, .del-handle').forEach(h => { h.style.display = editavel ? '' : 'none'; });
     const toolbar = document.getElementById('previewToolbar');
     if (toolbar) toolbar.style.display = editavel ? '' : 'none';
     const alerta = document.getElementById('alertaPreviewEdit');
@@ -521,7 +521,7 @@
       const icon = alerta.querySelector('.alert__icon');
       if (icon) icon.textContent = editavel ? '✏️' : '👁️';
       alerta.querySelector('.alert__body').innerHTML = editavel
-        ? 'Você pode <strong>editar o texto</strong> do documento (títulos, parágrafos e listas) pela barra acima. As <strong>tabelas de coletas</strong> vêm das etapas 2 e 3 e não são editadas aqui.'
+        ? 'Você pode <strong>editar o texto</strong> do documento (títulos, parágrafos e listas) pela barra acima. Passe o mouse sobre um bloco para <strong>movê-lo</strong> (⋮⋮) ou <strong>excluí-lo</strong> (✕). As <strong>tabelas de coletas</strong> vêm das etapas 2 e 3 e não são editadas aqui.'
         : 'Documento <strong>somente leitura</strong> (plano concluído ou prazo encerrado). Para editar o texto, use <strong>Reabrir para edição</strong>.';
     }
   }
@@ -1222,7 +1222,7 @@
     }
 
     /* ── Texto padrão completo (Plano de Amostragem — 12ª RS) ── */
-    function addItem(tag, html) { preview.appendChild(criarItem(tag, html)); }
+    function addItem(tag, html) { const it = criarItem(tag, html); preview.appendChild(it); return it; }
 
     addItem('h2', '1. INTRODUÇÃO');
     addItem('p', 'Em março de 1977, com a promulgação do Decreto Federal nº79.367, foi atribuída ao Ministério da Saúde (MS) a competência de elaborar normas e estabelecer o padrão de potabilidade de água para consumo humano a serem observados em todo o território nacional. Desde então, tendo em vista essa competência, o Ministério da Saúde determina o padrão de potabilidade da água para consumo humano por meio de portarias nacionais.');
@@ -1318,8 +1318,9 @@
     addItem('p', 'BRASIL. Ministério da Saúde. Inspeção sanitária em abastecimento de água, 2006.');
     addItem('p', 'BRASIL. Ministério da Saúde. Diretriz nacional do plano de amostragem da vigilância ambiental em saúde relacionada à qualidade da água para consumo humano, 2016.');
 
-    // Assinaturas (espaço para assinar acima de cada linha — padrão do documento oficial)
-    addItem('p', `${municipio} — PR, ${new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' })}.`);
+    // Assinaturas (em página própria — última página, padrão do documento oficial)
+    const _sig = addItem('p', `${municipio} — PR, ${new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' })}.`);
+    _sig.dataset.pagebreak = '1';   // força nova página antes das assinaturas
     addItem('p', '<br><br>__________________________________________');
     if (secretario) addItem('p', `<b>${secretario}</b>`);
     addItem('p', 'Secretário(a) Municipal de Saúde');
@@ -1337,15 +1338,38 @@
   let _blocoAtivo = null;
   function _initPreviewEdicao(preview) {
     preview.oninput = _agendarSalvarPreview;
+    // Garante o botão "excluir" nos blocos de texto (inclusive edições antigas restauradas)
+    preview.querySelectorAll('.item-editable').forEach(item => {
+      if (item.dataset.tabela) return;                 // tabelas não têm excluir
+      if (!item.querySelector('.del-handle')) {
+        const del = document.createElement('div');
+        del.className = 'del-handle'; del.innerHTML = '✕'; del.title = 'Excluir este bloco';
+        item.appendChild(del);
+      }
+    });
     const marcarAtivo = e => {
       const item = e.target.closest ? e.target.closest('.item-editable') : null;
       if (item) _blocoAtivo = item;
     };
+    const aoClicar = e => {
+      const del = e.target.closest ? e.target.closest('.del-handle') : null;
+      if (del) { e.preventDefault(); _excluirBloco(del.closest('.item-editable')); return; }
+      marcarAtivo(e);
+    };
     preview.onfocusin = marcarAtivo;
-    preview.onclick   = marcarAtivo;
+    preview.onclick   = aoClicar;
     if (typeof Sortable !== 'undefined') {
       Sortable.create(preview, { handle: '.drag-handle', animation: 150, onEnd: salvarEdicoesPreview });
     }
+  }
+
+  function _excluirBloco(item) {
+    if (edicaoBloqueada() || !item) return;
+    if (!confirm('Excluir este bloco do documento?')) return;
+    if (_blocoAtivo === item) _blocoAtivo = null;
+    item.remove();
+    salvarEdicoesPreview();
+    mostrarToast('🗑️ Bloco excluído.');
   }
 
   /* Botões de edição do preview */
@@ -1423,6 +1447,11 @@
     } else { el.textContent = str; }
     item.appendChild(handle);
     item.appendChild(el);
+    const del = document.createElement('div');
+    del.className = 'del-handle';
+    del.innerHTML = '✕';
+    del.title = 'Excluir este bloco';
+    item.appendChild(del);
     return item;
   }
 
@@ -1671,6 +1700,7 @@
       if (!el) return;
       // Blocos de texto esvaziados pelo usuário não entram no PDF
       if (el.tagName !== 'TABLE' && !(el.textContent || '').trim()) return;
+      if (item.dataset && item.dataset.pagebreak) { doc.addPage(); y = 20; }
       const tag  = el.tagName.toLowerCase();
       const text = el.innerText || el.textContent || '';
 
@@ -1831,6 +1861,7 @@
       const el = item.querySelector('h1, h2, h3, p, ul, table');
       if (!el) return;
       if (el.tagName !== 'TABLE' && !(el.textContent || '').trim()) return;
+      if (item.dataset && item.dataset.pagebreak) children.push(new Paragraph({ children: [new PageBreak()] }));
       const tag = el.tagName.toLowerCase();
       if (tag === 'h1') children.push(new Paragraph({ spacing: { after: 80 }, children: [new TextRun({ text: el.textContent, bold: true, size: 28 })] }));
       else if (tag === 'h2') children.push(new Paragraph({ spacing: { before: 160, after: 60 }, children: [new TextRun({ text: el.textContent, bold: true, color: AZUL, size: 22 })] }));
@@ -1848,7 +1879,7 @@
 
     return new Document({
       styles: { default: { document: { run: { font: 'Arial' } } } },
-      sections: [{ properties: { page: { margin: { top: 850, right: 850, bottom: 850, left: 850 } } }, children }],
+      sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, right: 850, bottom: 850, left: 850 } } }, children }],
     });
   }
 
