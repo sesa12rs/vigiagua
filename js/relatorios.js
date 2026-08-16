@@ -65,6 +65,7 @@ const Relatorios = (() => {
     return {
       ano: plano.cfg ? plano.cfg.ano : null,
       capacidade,
+      offsetEntrega: (typeof Utils !== 'undefined' && Utils.offsetEntrega) ? Utils.offsetEntrega(plano.cfg || {}) : 1,
       semanas,
       heatmap: { colunas, linhas },
       cargaMax,

@@ -217,6 +217,32 @@ function renderAcompanhamento() {
    Usa Relatorios.dadosLaboratorio(plano) como fonte.
    ════════════════════════════════════════════ */
 var _labDados = null;  // var (não let): init() roda antes desta linha no script
+var _modoData = 'coleta';   // 'coleta' | 'entrega' — como exibir as datas no Laboratório
+
+// Data exibida conforme o modo escolhido (coleta = terça; entrega = terça + offset).
+function _dataExibida(d) {
+  if (_modoData === 'entrega' && _labDados && _labDados.offsetEntrega) {
+    const r = new Date(d);
+    r.setDate(r.getDate() + _labDados.offsetEntrega);
+    return r;
+  }
+  return d;
+}
+
+function setModoData(m) {
+  _modoData = (m === 'entrega') ? 'entrega' : 'coleta';
+  const bc = document.getElementById('btnDataColeta');
+  const be = document.getElementById('btnDataEntrega');
+  if (bc && be) {
+    bc.className = 'btn btn--sm ' + (_modoData === 'coleta'  ? 'btn--primary' : 'btn--secondary');
+    be.className = 'btn btn--sm ' + (_modoData === 'entrega' ? 'btn--primary' : 'btn--secondary');
+  }
+  const info = document.getElementById('labModoInfo');
+  if (info) info.textContent = _modoData === 'entrega'
+    ? '(datas de entrega no laboratório)'
+    : '(datas de coleta no município)';
+  if (_labDados) { renderLabHeatmap(_labDados); renderLabRomaneio(_labDados); }
+}
 
 function labAno() {
   return parseInt(document.getElementById('cfgAno').value, 10) || new Date().getFullYear();
@@ -324,7 +350,8 @@ function renderLabHeatmap(dados) {
   };
   let h = '<table class="lab-heat"><thead><tr><th class="lab-heat__mun">Município</th>';
   dados.heatmap.colunas.forEach(c => {
-    h += `<th title="Semana ${c.semana} — ${c.data.toLocaleDateString('pt-BR')}">${_fmtDDMM(c.data)}</th>`;
+    const dt = _dataExibida(c.data);
+    h += `<th title="Semana ${c.semana} — ${dt.toLocaleDateString('pt-BR')}">${_fmtDDMM(dt)}</th>`;
   });
   h += '<th class="lab-heat__tot">Total</th></tr></thead><tbody>';
   dados.heatmap.linhas.forEach(l => {
@@ -346,7 +373,7 @@ function renderLabRomaneio(dados) {
   dados.semanas.forEach(s => {
     r += `<div style="border:1px solid var(--slate-200);border-radius:12px;padding:12px 16px;">
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline;border-bottom:1px solid var(--slate-100);padding-bottom:8px;margin-bottom:8px;">
-        <strong style="color:var(--slate-800);">Semana ${s.semana} · ${s.data.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' })}</strong>
+        <strong style="color:var(--slate-800);">Semana ${s.semana} · ${_dataExibida(s.data).toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' })}</strong>
         <span style="font-size:12.5px;color:var(--slate-600);">${s.nMun} municípios · <strong>${s.totalA}</strong> físico-químicas · <strong>${s.totalB}</strong> microbiológicas · <strong>${s.totalFrascos}</strong> amostras</span>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
@@ -384,12 +411,11 @@ function imprimirRomaneio() {
     + `<p class="sub">Total no ano: <b>${d.totalAmostrasA}</b> físico-químicas + <b>${d.totalAmostrasA}</b> microbiológicas = <b>${d.totalFrascosAno}</b> amostras`
     + (d.capacidade != null ? ` · capacidade ${d.capacidade}/semana por tipo (${d.capacidade * 2} no total)` : '') + `.</p>`;
   d.semanas.forEach(s => {
-    body += `<div class="viagem"><h2>Semana ${s.semana} — ${s.data.toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })}</h2>`
-      + `<table><thead><tr><th>Município</th><th>Coletas</th></tr></thead><tbody>`;
-    s.municipios.forEach(m => { body += `<tr><td>${m.nome}</td><td>${m.qtd}</td></tr>`; });
-    body += `<tr class="tot"><td>Total físico-químicas</td><td>${s.totalA}</td></tr>`
-      + `<tr class="tot"><td>Total microbiológicas</td><td>${s.totalB}</td></tr>`
-      + `<tr class="tot"><td>Total de amostras</td><td>${s.totalFrascos}</td></tr>`
+    body += `<div class="viagem"><h2>Semana ${s.semana} — ${_dataExibida(s.data).toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })}</h2>`
+      + `<table><thead><tr><th>Município</th><th>Físico-químicas</th><th>Microbiológicas</th></tr></thead><tbody>`;
+    s.municipios.forEach(m => { body += `<tr><td>${m.nome}</td><td>${m.qtd}</td><td>${m.qtd}</td></tr>`; });
+    body += `<tr class="tot"><td>Total</td><td>${s.totalA}</td><td>${s.totalB}</td></tr>`
+      + `<tr class="tot"><td>Total de amostras</td><td colspan="2">${s.totalFrascos}</td></tr>`
       + `</tbody></table></div>`;
   });
   const win = window.open('', '_blank');
@@ -399,9 +425,9 @@ function imprimirRomaneio() {
     + `h1{font-size:20px;margin:0 0 4px;}.sub{color:#475569;margin:0 0 18px;font-size:13px;}`
     + `.viagem{margin-bottom:18px;break-inside:avoid;page-break-inside:avoid;}`
     + `h2{font-size:14px;margin:0 0 6px;border-bottom:2px solid #0ea5e9;padding-bottom:3px;}`
-    + `table{border-collapse:collapse;width:100%;max-width:520px;font-size:12.5px;}`
+    + `table{border-collapse:collapse;width:100%;max-width:600px;font-size:12.5px;}`
     + `th,td{border:1px solid #cbd5e1;padding:4px 8px;text-align:left;}th{background:#f1f5f9;}`
-    + `td:last-child,th:last-child{text-align:right;width:130px;}tr.tot td{font-weight:bold;background:#f8fafc;}`
+    + `td:nth-child(2),td:nth-child(3),th:nth-child(2),th:nth-child(3){text-align:right;width:120px;white-space:nowrap;}tr.tot td{font-weight:bold;background:#f8fafc;}`
     + `</style></head><body>${body}<script>window.onload=function(){window.print();}<\/script></body></html>`);
   win.document.close();
 }

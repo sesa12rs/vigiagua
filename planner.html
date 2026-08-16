@@ -1046,6 +1046,14 @@
     <div id="labVazio" style="display:none;"></div>
 
     <div id="labConteudo">
+      <div class="card" style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+        <span style="font-size:13px;color:var(--slate-600);font-weight:600;">Exibir datas por:</span>
+        <div class="seg-toggle" role="group">
+          <button id="btnDataColeta"  class="btn btn--sm btn--primary"   onclick="setModoData('coleta')">📅 Dia da coleta</button>
+          <button id="btnDataEntrega" class="btn btn--sm btn--secondary" onclick="setModoData('entrega')">🚚 Dia da entrega</button>
+        </div>
+        <span id="labModoInfo" style="font-size:12px;color:var(--slate-400);"></span>
+      </div>
       <div class="card" style="margin-bottom:16px;">
         <h3 style="margin:0 0 4px;font-size:15px;color:var(--slate-800);">Carga semanal do laboratório</h3>
         <div id="labResumoTotais" style="font-size:13px;color:var(--slate-600);margin-bottom:12px;"></div>
