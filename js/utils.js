@@ -164,6 +164,20 @@ const Utils = (() => {
 
   function nomeMes(idx) { return MESES_PT[idx]; } // 0-based
 
+  /* Intervalo da semana (segunda a domingo) que contém a data de coleta d.
+     Ex.: terça 05/01 → "04 a 10 de jan"; vira "29 de mar a 04 de abr" entre meses. */
+  function rangeSemana(d) {
+    const M = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    const dow = d.getDay();                       // 0=dom..6=sáb
+    const off = (dow === 0) ? -6 : (1 - dow);     // segunda-feira da semana de d
+    const ini = new Date(d.getFullYear(), d.getMonth(), d.getDate() + off);
+    const fim = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + 6);
+    const dI = String(ini.getDate()).padStart(2, '0');
+    const dF = String(fim.getDate()).padStart(2, '0');
+    const mI = M[ini.getMonth()], mF = M[fim.getMonth()];
+    return mI === mF ? `${dI} a ${dF} de ${mI}` : `${dI} de ${mI} a ${dF} de ${mF}`;
+  }
+
   function _addDays(d, n) {
     const r = new Date(d);
     r.setDate(r.getDate() + n);
@@ -183,7 +197,7 @@ const Utils = (() => {
     calcularPascoa, feriadosNacionaisAno, tercasFeirasDoAno, offsetEntrega,
     quartaEhFeriadoNacional, ehFeriadoMunicipal,
     semanasDeFerias, semanasComFeriadoNacQua, calcularSemanasBloqueadas, getPeriodo,
-    fmtData, fmtDataLonga, nomeMes, semanaISO,
+    fmtData, fmtDataLonga, nomeMes, semanaISO, rangeSemana,
     MESES_PT,
   };
 })();

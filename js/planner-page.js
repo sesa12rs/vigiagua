@@ -1460,15 +1460,15 @@ function inicializarSemanas(forcar = false) {
   const ano  = parseInt(document.getElementById('cfgAno').value) || 2026;
   tercas = Utils.tercasFeirasDoAno(ano, _diaColeta());
   const salvas = DB.Semanas.carregar(ano);
-  semanasAtivas = (salvas && salvas.length === tercas.length && !forcar)
-    ? salvas
-    : calcularSemanasDefault(ano);
-  // Propagação conservadora: garante que as semanas com feriado que PARALISA o
-  // processo fiquem inativas — em qualquer carregamento (troca de ano, render,
-  // etc.). Só DESATIVA; nunca reativa, preservando ajustes manuais e recesso.
-  Utils.calcularSemanasBloqueadas(tercas, ano, feriados, DB.Config.carregar())
-    .forEach(i => { semanasAtivas[i] = false; });
-  DB.Semanas.salvar(ano, semanasAtivas);
+  if (salvas && salvas.length === tercas.length && !forcar) {
+    // Respeita o estado salvo — inclusive ativações manuais de semanas com feriado
+    // e o "ativar todas". O bloqueio por feriado é aplicado no default (ano novo),
+    // ao trocar o dia de coleta e ao adicionar/editar feriados (_encaixarFeriadosNasSemanas).
+    semanasAtivas = salvas;
+  } else {
+    semanasAtivas = calcularSemanasDefault(ano);   // default já aplica recesso + bloqueio
+    DB.Semanas.salvar(ano, semanasAtivas);
+  }
 }
 
 function renderSemanasGrid() {
@@ -1510,8 +1510,7 @@ function renderSemanasGrid() {
     div.innerHTML = `
       <div class="week-card__status">${semanasAtivas[i] ? '✅' : '❌'}</div>
       <div class="week-card__num">Sem. ${i + 1}</div>
-      <div class="week-card__date">${Utils.fmtData(t, { day:'2-digit', month:'short' })}</div>
-    `;
+      <div class="week-card__date">${Utils.rangeSemana(t)}</div>`;
     grid.appendChild(div);
   });
 

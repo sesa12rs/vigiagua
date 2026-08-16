@@ -124,5 +124,10 @@ console.log('\n[Feriado que paralisa o processo — bloqueio de semana (fatia 5)
     !Utils.calcularSemanasBloqueadas(datas, ano, fer, cfgOff).includes(iAlvo));
 }
 
+// ── rangeSemana: intervalo segunda-domingo ──
+check('rangeSemana terça 05/01/2027 → "04 a 10 de jan"', Utils.rangeSemana(new Date(2027,0,5)) === '04 a 10 de jan', Utils.rangeSemana(new Date(2027,0,5)));
+check('rangeSemana entre meses (30/03) → "29 de mar a 04 de abr"', Utils.rangeSemana(new Date(2027,2,30)) === '29 de mar a 04 de abr', Utils.rangeSemana(new Date(2027,2,30)));
+check('rangeSemana domingo de borda (10/01) → "04 a 10 de jan"', Utils.rangeSemana(new Date(2027,0,10)) === '04 a 10 de jan');
+
 console.log(fail ? `\n\u274c ${fail} falha(s)` : '\n\u2705 Dia de coleta/entrega OK');
 process.exit(fail ? 1 : 0);
