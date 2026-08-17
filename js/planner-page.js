@@ -406,6 +406,16 @@ function baixarCsvHeatmap() {
   a.click();
 }
 
+function baixarCsvRomaneio() {
+  if (!_labDados) { mostrarToast('Gere o plano do ano primeiro.'); return; }
+  const off = (_modoData === 'entrega' && _labDados.offsetEntrega) ? _labDados.offsetEntrega : 0;
+  const csv = Relatorios.csvRomaneio(_labDados, off);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }));
+  a.download = `vigiagua_romaneio_${_labDados.ano}_${_modoData}.csv`;
+  a.click();
+}
+
 function imprimirRomaneio() {
   if (!_labDados) { mostrarToast('Gere o plano do ano primeiro.'); return; }
   const d = _labDados;

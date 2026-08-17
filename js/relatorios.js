@@ -190,7 +190,22 @@ const Relatorios = (() => {
     return csv;
   }
 
-  return { dadosLaboratorio, csvResumoSemanal, csvHeatmap, consolidadoColetas, csvConsolidado };
+  /** CSV do romaneio: uma linha por semana × município (Físico-químicas, Microbiológicas, Total). */
+  function csvRomaneio(dados, offsetDias = 0) {
+    if (!dados) return '';
+    const esc = s => `"${String(s == null ? '' : s).replace(/"/g, '""')}"`;
+    const shift = d => { if (!offsetDias) return d; const r = new Date(d); r.setDate(r.getDate() + offsetDias); return r; };
+    let csv = 'Semana,Data,Municipio,Fisico_Quimicas,Microbiologicas,Total\n';
+    dados.semanas.forEach(s => {
+      const data = shift(s.data).toLocaleDateString('pt-BR');
+      s.municipios.forEach(m => {
+        csv += `${s.semana},${data},${esc(m.nome)},${m.qtd},${m.qtd},${m.qtd * 2}\n`;
+      });
+    });
+    return csv;
+  }
+
+  return { dadosLaboratorio, csvResumoSemanal, csvHeatmap, csvRomaneio, consolidadoColetas, csvConsolidado };
 })();
 
 if (typeof window !== 'undefined') window.Relatorios = Relatorios;
