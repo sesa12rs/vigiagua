@@ -414,10 +414,9 @@ function imprimirRomaneio() {
     + (d.capacidade != null ? ` · capacidade ${d.capacidade}/semana por tipo (${d.capacidade * 2} no total)` : '') + `.</p>`;
   d.semanas.forEach(s => {
     body += `<div class="viagem"><h2>Semana ${s.semana} — ${_dataExibida(s.data).toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })}</h2>`
-      + `<table><thead><tr><th>Município</th><th>Físico-químicas</th><th>Microbiológicas</th></tr></thead><tbody>`;
-    s.municipios.forEach(m => { body += `<tr><td>${m.nome}</td><td>${m.qtd}</td><td>${m.qtd}</td></tr>`; });
-    body += `<tr class="tot"><td>Total</td><td>${s.totalA}</td><td>${s.totalB}</td></tr>`
-      + `<tr class="tot"><td>Total de amostras</td><td colspan="2">${s.totalFrascos}</td></tr>`
+      + `<table><thead><tr><th>Município</th><th>Físico-químicas</th><th>Microbiológicas</th><th>Total</th></tr></thead><tbody>`;
+    s.municipios.forEach(m => { body += `<tr><td>${m.nome}</td><td>${m.qtd}</td><td>${m.qtd}</td><td>${m.qtd * 2}</td></tr>`; });
+    body += `<tr class="tot"><td>Total</td><td>${s.totalA}</td><td>${s.totalB}</td><td>${s.totalFrascos}</td></tr>`
       + `</tbody></table></div>`;
   });
   const win = window.open('', '_blank');
@@ -427,9 +426,9 @@ function imprimirRomaneio() {
     + `h1{font-size:20px;margin:0 0 4px;}.sub{color:#475569;margin:0 0 18px;font-size:13px;}`
     + `.viagem{margin-bottom:18px;break-inside:avoid;page-break-inside:avoid;}`
     + `h2{font-size:14px;margin:0 0 6px;border-bottom:2px solid #0ea5e9;padding-bottom:3px;}`
-    + `table{border-collapse:collapse;width:100%;max-width:600px;font-size:12.5px;}`
+    + `table{border-collapse:collapse;width:100%;max-width:640px;font-size:12.5px;}`
     + `th,td{border:1px solid #cbd5e1;padding:4px 8px;text-align:left;}th{background:#f1f5f9;}`
-    + `td:nth-child(2),td:nth-child(3),th:nth-child(2),th:nth-child(3){text-align:right;width:120px;white-space:nowrap;}tr.tot td{font-weight:bold;background:#f8fafc;}`
+    + `td:nth-child(2),td:nth-child(3),td:nth-child(4),th:nth-child(2),th:nth-child(3),th:nth-child(4){text-align:right;width:100px;white-space:nowrap;}tr.tot td{font-weight:bold;background:#f8fafc;}`
     + `</style></head><body>${body}<script>window.onload=function(){window.print();}<\/script></body></html>`);
   win.document.close();
 }
