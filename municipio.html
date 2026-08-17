@@ -171,7 +171,8 @@
 
     /* ── Collection table ────────────────────── */
     .coleta-table-wrapper {
-      overflow-x: auto;
+      overflow: auto;            /* rolagem horizontal e vertical */
+      max-height: 62vh;          /* altura fixa com rolagem, como a tabela de consolidados */
       border-radius: var(--radius-md);
       border: 1px solid var(--slate-200);
       margin-bottom: 16px;
@@ -184,6 +185,7 @@
     }
 
     .coleta-table thead tr { background: var(--slate-800); color: #fff; }
+    .coleta-table thead th { position: sticky; top: 0; z-index: 2; background: var(--slate-800); }
     .coleta-table th { padding: 9px 10px; text-align: left; font-size: 11px; letter-spacing: .3px; }
     .coleta-table td { padding: 7px 10px; border-bottom: 1px solid var(--slate-100); vertical-align: middle; }
     .coleta-table tbody tr:hover { background: var(--blue-50); }
