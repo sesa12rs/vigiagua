@@ -75,22 +75,24 @@ const Relatorios = (() => {
   }
 
   /** CSV de resumo por semana (formato de conferência do laboratório). */
-  function csvResumoSemanal(dados) {
+  function csvResumoSemanal(dados, offsetDias = 0) {
     if (!dados) return '';
+    const shift = d => { if (!offsetDias) return d; const r = new Date(d); r.setDate(r.getDate() + offsetDias); return r; };
     let csv = 'Semana,Data,Municipios,Fisico_Quimicas,Microbiologicas,Total_Amostras\n';
     dados.semanas.forEach(s => {
-      const data = s.data.toLocaleDateString('pt-BR');
+      const data = shift(s.data).toLocaleDateString('pt-BR');
       csv += `${s.semana},${data},${s.nMun},${s.totalA},${s.totalB},${s.totalFrascos}\n`;
     });
     return csv;
   }
 
   /** CSV do heatmap semana × município (linhas = municípios, colunas = semanas). */
-  function csvHeatmap(dados) {
+  function csvHeatmap(dados, offsetDias = 0) {
     if (!dados) return '';
     const esc = s => `"${String(s == null ? '' : s).replace(/"/g, '""')}"`;
+    const shift = d => { if (!offsetDias) return d; const r = new Date(d); r.setDate(r.getDate() + offsetDias); return r; };
     const cols = dados.heatmap.colunas;
-    let csv = 'Municipio,' + cols.map(c => c.data.toLocaleDateString('pt-BR')).join(',') + ',Total\n';
+    let csv = 'Municipio,' + cols.map(c => shift(c.data).toLocaleDateString('pt-BR')).join(',') + ',Total\n';
     dados.heatmap.linhas.forEach(l => {
       csv += [esc(l.nome), ...l.celulas, l.total].join(',') + '\n';
     });

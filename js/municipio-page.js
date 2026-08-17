@@ -1467,6 +1467,19 @@
     // As tabelas de coletas NÃO são editáveis na prévia — elas refletem as
     // etapas 2 e 3 e são regeradas a cada visualização (evita divergência com o PDF).
 
+    // Tabela de coletas (11 colunas): larguras fixas para os cabeçalhos ficarem
+    // na horizontal e o layout ficar fiel ao PDF (ID largo, parâmetros estreitos, Local flexível).
+    if ((head || []).length === 11) {
+      table.classList.add('doc-table--coletas');
+      const cg = document.createElement('colgroup');
+      ['12.5%', '5.5%', '7%', '11%', '', '8%', '4.5%', '4.5%', '4.5%', '4.5%', '8%'].forEach(w => {
+        const col = document.createElement('col');
+        if (w) col.style.width = w;
+        cg.appendChild(col);
+      });
+      table.appendChild(cg);
+    }
+
     if (caption) {
       const cap = document.createElement('caption');
       cap.textContent = caption;

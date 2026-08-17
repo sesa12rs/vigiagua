@@ -241,7 +241,7 @@ function setModoData(m) {
   if (info) info.textContent = _modoData === 'entrega'
     ? '(datas de entrega no laboratório)'
     : '(datas de coleta no município)';
-  if (_labDados) { renderLabHeatmap(_labDados); renderLabRomaneio(_labDados); }
+  if (_labDados) { renderLabCarga(_labDados); renderLabHeatmap(_labDados); renderLabRomaneio(_labDados); }
 }
 
 function labAno() {
@@ -289,8 +289,8 @@ function renderLaboratorio() {
   // Totais + escala
   const totais = document.getElementById('labResumoTotais');
   if (totais) {
-    totais.innerHTML = `No ano: <strong>${dados.totalAmostrasA}</strong> físico-químicas + <strong>${dados.totalAmostrasA}</strong> microbiológicas = `
-      + `<strong>${dados.totalFrascosAno}</strong> amostras · em <strong>${dados.semanas.length}</strong> viagens`
+    totais.innerHTML = `Total planejado: <strong>${dados.totalAmostrasA}</strong> físico-químicas + <strong>${dados.totalAmostrasA}</strong> microbiológicas = `
+      + `<strong>${dados.totalFrascosAno}</strong> amostras no ano · <strong>${dados.semanas.length}</strong> viagens`
       + (dados.capacidade != null ? ` · capacidade <strong>${dados.capacidade}</strong>/semana por tipo (${dados.capacidade * 2} análises no total)` : '');
   }
 
@@ -329,10 +329,10 @@ function renderLabCarga(dados) {
       if (s.totalA > cap)          cor = 'var(--red-500)';
       else if (s.totalA >= cap * 0.9) cor = 'var(--amber-500)';
     }
-    svg += `<rect x="${x}" y="${y.toFixed(1)}" width="${barW}" height="${Math.max(h, 0).toFixed(1)}" rx="3" fill="${cor}"><title>Semana ${s.semana} (${_fmtDDMM(s.data)}): ${s.totalA} físico-químicas · ${s.totalA} microbiológicas · ${s.totalFrascos} amostras</title></rect>`;
+    svg += `<rect x="${x}" y="${y.toFixed(1)}" width="${barW}" height="${Math.max(h, 0).toFixed(1)}" rx="3" fill="${cor}"><title>Semana ${s.semana} (${_fmtDDMM(_dataExibida(s.data))}): ${s.totalA} físico-químicas · ${s.totalA} microbiológicas · ${s.totalFrascos} amostras</title></rect>`;
     svg += `<text x="${x + barW / 2}" y="${(y - 4).toFixed(1)}" font-size="9.5" text-anchor="middle" fill="var(--slate-600)">${s.totalA}</text>`;
     if (i % rotulaCada === 0)
-      svg += `<text x="${x + barW / 2}" y="${yBase + 14}" font-size="9" text-anchor="middle" fill="var(--slate-500)">${_fmtDDMM(s.data)}</text>`;
+      svg += `<text x="${x + barW / 2}" y="${yBase + 14}" font-size="9" text-anchor="middle" fill="var(--slate-500)">${_fmtDDMM(_dataExibida(s.data))}</text>`;
   });
   svg += `</svg>`;
   el.innerHTML = svg;
@@ -388,19 +388,21 @@ function renderLabRomaneio(dados) {
 
 function baixarCsvResumoSemanal() {
   if (!_labDados) { mostrarToast('Gere o plano do ano primeiro.'); return; }
-  const csv = Relatorios.csvResumoSemanal(_labDados);
+  const off = (_modoData === 'entrega' && _labDados.offsetEntrega) ? _labDados.offsetEntrega : 0;
+  const csv = Relatorios.csvResumoSemanal(_labDados, off);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-  a.download = `vigiagua_resumo_semanal_${_labDados.ano}.csv`;
+  a.download = `vigiagua_resumo_semanal_${_labDados.ano}_${_modoData}.csv`;
   a.click();
 }
 
 function baixarCsvHeatmap() {
   if (!_labDados) { mostrarToast('Gere o plano do ano primeiro.'); return; }
-  const csv = Relatorios.csvHeatmap(_labDados);
+  const off = (_modoData === 'entrega' && _labDados.offsetEntrega) ? _labDados.offsetEntrega : 0;
+  const csv = Relatorios.csvHeatmap(_labDados, off);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }));
-  a.download = `vigiagua_heatmap_${_labDados.ano}.csv`;
+  a.download = `vigiagua_heatmap_${_labDados.ano}_${_modoData}.csv`;
   a.click();
 }
 
@@ -408,7 +410,7 @@ function imprimirRomaneio() {
   if (!_labDados) { mostrarToast('Gere o plano do ano primeiro.'); return; }
   const d = _labDados;
   let body = `<h1>Romaneio de coletas — 12ª RS · ${d.ano}</h1>`
-    + `<p class="sub">Total no ano: <b>${d.totalAmostrasA}</b> físico-químicas + <b>${d.totalAmostrasA}</b> microbiológicas = <b>${d.totalFrascosAno}</b> amostras`
+    + `<p class="sub">Total planejado: <b>${d.totalAmostrasA}</b> físico-químicas + <b>${d.totalAmostrasA}</b> microbiológicas = <b>${d.totalFrascosAno}</b> amostras no ano`
     + (d.capacidade != null ? ` · capacidade ${d.capacidade}/semana por tipo (${d.capacidade * 2} no total)` : '') + `.</p>`;
   d.semanas.forEach(s => {
     body += `<div class="viagem"><h2>Semana ${s.semana} — ${_dataExibida(s.data).toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' })}</h2>`
