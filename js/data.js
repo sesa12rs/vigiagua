@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v82';
+  window.VIGIAGUA_VERSAO = 'fase2-v83';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -572,7 +572,16 @@ const DB = (() => {
     statusBruto(nome, ano) {
       const p = this.carregar(nome, ano);
       if (!p) return 'nao_iniciado';
-      return p.status === 'concluido' ? 'concluido' : 'rascunho';
+      if (p.status === 'concluido') return 'concluido';
+      // Só conta como "em preenchimento" se houver dados reais: algum campo da
+      // etapa 1 ou algum local de coleta. Apenas ABRIR o plano (ex.: a Regional
+      // acessando pela aba de acompanhamento) NÃO deve contabilizar.
+      const c = p.campos || {};
+      const campoOk = ['populacao', 'endereco', 'secretario', 'responsavel', 'profissional']
+        .some(k => String(c[k] || '').trim() !== '');
+      const temLocal = arr => Array.isArray(arr) && arr.some(x =>
+        x && (String(x.local || '').trim() !== '' || (x.filho && String(x.filho.local || '').trim() !== '')));
+      return (campoOk || temLocal(p.normais) || temLocal(p.extras)) ? 'rascunho' : 'nao_iniciado';
     },
 
     /**

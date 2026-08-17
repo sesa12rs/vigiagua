@@ -201,6 +201,7 @@ const Relatorios = (() => {
       s.municipios.forEach(m => {
         csv += `${s.semana},${data},${esc(m.nome)},${m.qtd},${m.qtd},${m.qtd * 2}\n`;
       });
+      csv += `${s.semana},${data},"TOTAL DA SEMANA",${s.totalA},${s.totalB},${s.totalFrascos}\n`;
     });
     return csv;
   }

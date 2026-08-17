@@ -193,7 +193,7 @@ function renderAcompanhamento() {
       : `<span style="font-size:12px;color:var(--slate-400);min-width:190px;">sem coletas preenchidas</span>`;
     const quando = l.status === 'concluido'
       ? `concluído ${fmt(l.concluidoEm)}`
-      : (l.salvoEm ? `atualizado ${fmt(l.salvoEm)}` : 'nunca aberto');
+      : (l.status !== 'nao_iniciado' && l.salvoEm ? `atualizado ${fmt(l.salvoEm)}` : 'nunca aberto');
 
     html += `<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
                  border:1px solid var(--slate-200);border-radius:12px;padding:12px 16px;background:#fff;">

@@ -75,6 +75,8 @@
     // A Regional pode entrar direto num município pelo atalho do planner
     // (municipio.html?municipio=Nome). O seletor continua aberto para ela.
     if (sessao.perfil === 'regional') {
+      const btnVoltar = document.getElementById('btnVoltarPlanner');
+      if (btnVoltar) btnVoltar.style.display = '';
       const alvo = new URLSearchParams(location.search).get('municipio');
       if (alvo) {
         const sel = document.getElementById('municipio');
@@ -1894,6 +1896,28 @@
       styles: { default: { document: { run: { font: 'Arial' } } } },
       sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, right: 850, bottom: 850, left: 850 } } }, children }],
     });
+  }
+
+  function baixarCsvColetas() {
+    const { mun, ano } = _munIdent();
+    if (!mun || !ano) { mostrarToast('Selecione o município e o ano.'); return; }
+    if (typeof atualizarIDs === 'function') atualizarIDs();
+    if (typeof atualizarIDsExtras === 'function') atualizarIDsExtras();
+    const normais = coletarDadosTabela('corpoTabela');
+    const extras  = coletarDadosTabela('corpoTabelaExtras');
+    if (!normais.length && !extras.length) { mostrarToast('Gere o cronograma primeiro — não há coletas.'); return; }
+    const esc = s => `"${String(s == null ? '' : s).replace(/"/g, '""')}"`;
+    const fmtD = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('pt-BR') : '';
+    const bx = b => b ? 'X' : '';
+    const linha = (c, tipo) => [esc(c.id), tipo, c.semana, c.numero, fmtD(c.data), esc(c.local), esc(c.sistema), bx(c.mb), bx(c.tb), bx(c.cr), bx(c.fl), esc(c.criterio)].join(',');
+    let csv = 'ID,Tipo,Semana,Numero,Data,Local,Sistema,MB,TB,CR,FL,Criterio\n';
+    normais.forEach(c => { csv += linha(c, 'Programada') + '\n'; });
+    extras.forEach(c => { csv += linha(c, 'Extra') + '\n'; });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }));
+    a.download = `coletas_${mun.replace(/\s+/g, '_')}_${ano}.csv`;
+    a.click();
+    mostrarToast('📥 CSV das coletas gerado.');
   }
 
   async function gerarDOCX() {

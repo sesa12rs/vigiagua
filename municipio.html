@@ -371,6 +371,7 @@
         <span class="topbar__user-badge" id="badgeMun">Município</span>
         <span id="nomeUsuario">—</span>
       </span>
+      <a href="planner.html" class="topbar__btn" id="btnVoltarPlanner" style="display:none;text-decoration:none;">← Planejamento</a>
       <button class="topbar__btn" onclick="sair()">🚪 Sair</button>
     </div>
   </header>
@@ -565,6 +566,7 @@
           <button class="btn btn--success btn--sm" id="btnConcluir" onclick="alternarConclusao()">✓ Concluir plano</button>
           <button class="btn btn--primary" onclick="gerarPDF()">⬇️ Baixar PDF</button>
           <button class="btn btn--secondary" onclick="gerarDOCX()">⬇️ Baixar Word (.docx)</button>
+          <button class="btn btn--secondary" onclick="baixarCsvColetas()">📥 CSV das coletas</button>
         </div>
       </div>
 
@@ -597,6 +599,7 @@
         <button class="btn btn--secondary" onclick="voltarEtapa3()">← Voltar</button>
         <button class="btn btn--primary btn--lg" onclick="gerarPDF()">⬇️ Baixar PDF</button>
         <button class="btn btn--secondary btn--lg" onclick="gerarDOCX()">⬇️ Baixar Word (.docx)</button>
+        <button class="btn btn--secondary btn--lg" onclick="baixarCsvColetas()">📥 CSV das coletas</button>
       </div>
     </div>
 
