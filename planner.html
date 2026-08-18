@@ -1408,7 +1408,20 @@
       const porNome = {}; contas.forEach(c=>{ if(c.municipio_nome) porNome[c.municipio_nome]=c; });
       let html='<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:520px;">'
         +'<thead><tr style="text-align:left;border-bottom:2px solid var(--slate-200);color:var(--slate-600);">'
-        +'<th style="padding:6px 8px;">Município</th><th style="padding:6px 8px;">Conta</th><th style="padding:6px 8px;">E-mail</th><th style="padding:6px 8px;text-align:right;">Ação</th></tr></thead><tbody>';
+        +'<th style="padding:6px 8px;">Usuário</th><th style="padding:6px 8px;">Conta</th><th style="padding:6px 8px;">E-mail</th><th style="padding:6px 8px;text-align:right;">Ação</th></tr></thead><tbody>';
+      // Linha da Regional (a própria conta de quem está logado)
+      const reg = contas.find(c => c.perfil === 'regional');
+      if (reg) {
+        const emailReg = (reg.email || '').replace(/'/g, "\\'");
+        html += '<tr style="border-bottom:1px solid var(--slate-100);background:var(--blue-50);">'
+          + '<td style="padding:6px 8px;font-weight:700;color:var(--slate-800);">12ª Regional <span style="font-weight:400;color:var(--slate-400);">(você)</span></td>'
+          + '<td style="padding:6px 8px;"><span style="color:#15803d;">✓ criada</span></td>'
+          + '<td style="padding:6px 8px;color:var(--slate-500);">' + (reg.email || '') + '</td>'
+          + '<td style="padding:6px 8px;text-align:right;white-space:nowrap;">'
+          + '<button class="btn btn--ghost btn--sm" onclick="abrirTrocarEmail(\'' + reg.id + '\',\'12ª Regional\',\'' + emailReg + '\')">✉️ Trocar e-mail</button> '
+          + '<button class="btn btn--ghost btn--sm" onclick="resetarSenhaUsuario(\'' + reg.id + '\',\'12ª Regional\')">🔑 Resetar senha</button>'
+          + '</td></tr>';
+      }
       municipios.forEach(m=>{
         const c=porNome[m.nome];
         const nomeJs=m.nome.replace(/'/g,"\\'");
@@ -1462,11 +1475,21 @@
       else { _mcMsg((r&&r.erro)||'Falha ao criar conta.', true); }
     }
     function resetarSenhaUsuario(userId, nome) {
-      if(!confirm('Resetar a senha de '+nome+'?\nSerá gerada uma senha temporária para você repassar.')) return;
+      const sess = (window.DB && DB.Auth && DB.Auth.sessaoAtual) ? DB.Auth.sessaoAtual() : null;
+      const ehEu = sess && sess.userId === userId;
+      const aviso = ehEu ? '\n\nATENÇÃO: é a SUA conta. Você será desconectado e deverá entrar novamente com a senha temporária.' : '';
+      if(!confirm('Resetar a senha de '+nome+'?\nSerá gerada uma senha temporária para repassar.'+aviso)) return;
       const temp=DB.Admin.gerarSenhaTemp();
       _usuariosAviso('Resetando…', false);
       DB.Admin.resetarSenha({ userId:userId, senha:temp }).then(function(r){
-        if(r && r.ok){ _usuariosAviso(''); _resultadoConta('Senha resetada!', nome, null, temp); }
+        if(r && r.ok){
+          _usuariosAviso('');
+          _resultadoConta('Senha resetada!', nome, null, temp);
+          if(ehEu){
+            const f=document.getElementById('mcFooter');
+            if(f) f.innerHTML='<button class="btn btn--primary" onclick="DB.Auth.logoutAsync().finally(function(){location.href=\'index.html\';})">Sair e entrar de novo</button>';
+          }
+        }
         else { _usuariosAviso((r&&r.erro)||'Falha ao resetar a senha.', true); }
       });
     }
