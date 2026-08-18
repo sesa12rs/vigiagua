@@ -1413,7 +1413,8 @@
         const c=porNome[m.nome];
         const nomeJs=m.nome.replace(/'/g,"\\'");
         const acao = c
-          ? '<button class="btn btn--ghost btn--sm" onclick="resetarSenhaUsuario(\''+c.id+'\',\''+nomeJs+'\')">🔑 Resetar senha</button>'
+          ? '<button class="btn btn--ghost btn--sm" onclick="abrirTrocarEmail(\''+c.id+'\',\''+nomeJs+'\',\''+(c.email||'')+'\')">✉️ Trocar e-mail</button> '
+            +'<button class="btn btn--ghost btn--sm" onclick="resetarSenhaUsuario(\''+c.id+'\',\''+nomeJs+'\')">🔑 Resetar senha</button>'
           : '<button class="btn btn--secondary btn--sm" onclick="abrirCriarConta(\''+nomeJs+'\','+m.id+')">➕ Criar conta</button>';
         html+='<tr style="border-bottom:1px solid var(--slate-100);"><td style="padding:6px 8px;font-weight:600;color:var(--slate-800);">'+m.nome+'</td>'
           +'<td style="padding:6px 8px;">'+(c?'<span style="color:#15803d;">✓ criada</span>':'<span style="color:var(--slate-400);">— sem conta</span>')+'</td>'
@@ -1472,12 +1473,36 @@
     function _resultadoConta(titulo, nome, email, senha) {
       document.getElementById('mcTitulo').textContent=titulo;
       document.getElementById('mcBody').innerHTML=
-        '<p style="font-size:13px;color:var(--slate-700);margin:0 0 10px;">Repasse estes dados a <strong>'+nome+'</strong>:</p>'
+        '<p style="font-size:13px;color:var(--slate-700);margin:0 0 10px;">'+(senha?('Repasse estes dados a <strong>'+nome+'</strong>:'):('Dados de <strong>'+nome+'</strong>:'))+'</p>'
         +(email?('<div style="font-size:13px;margin-bottom:6px;">E-mail: <span style="font-family:monospace;">'+email+'</span></div>'):'')
-        +'<div style="font-size:13px;">Senha temporária: <span style="font-family:monospace;font-size:15px;background:var(--slate-100);padding:2px 8px;border-radius:6px;">'+senha+'</span></div>'
-        +'<p style="font-size:12px;color:var(--slate-500);margin:12px 0 0;">No primeiro acesso, o município será obrigado a definir a própria senha.</p>';
+        +(senha?('<div style="font-size:13px;">Senha temporária: <span style="font-family:monospace;font-size:15px;background:var(--slate-100);padding:2px 8px;border-radius:6px;">'+senha+'</span></div>'
+          +'<p style="font-size:12px;color:var(--slate-500);margin:12px 0 0;">No primeiro acesso, o município será obrigado a definir a própria senha.</p>'):'')
+        +(!senha&&email?('<p style="font-size:12px;color:var(--slate-500);margin:12px 0 0;">A senha atual do município continua a mesma. Se o e-mail for real, ele já pode recuperar a senha por e-mail.<br><strong>Importante:</strong> para entrar, esse município deve usar a opção "entrar com e-mail" e digitar o e-mail novo (a lista de nomes usa o e-mail automático).</p>'):'');
       document.getElementById('mcFooter').innerHTML='<button class="btn btn--primary" onclick="fecharModalConta()">Fechar</button>';
       document.getElementById('modalConta').classList.add('open');
+    }
+    var _emailCtx = null;
+    function abrirTrocarEmail(userId, nome, emailAtual) {
+      _emailCtx = { userId:userId, nome:nome };
+      document.getElementById('mcTitulo').textContent='Trocar e-mail — '+nome;
+      document.getElementById('mcBody').innerHTML=
+        '<div id="mcMsg" style="display:none;margin-bottom:10px;padding:8px 10px;border-radius:6px;font-size:12.5px;"></div>'
+        +'<label style="font-size:13px;font-weight:600;">Novo e-mail</label>'
+        +'<input type="email" id="mcEmailNovo" value="'+(emailAtual||'')+'" style="width:100%;margin:6px 0 4px;padding:7px 9px;border:1px solid var(--slate-300);border-radius:8px;">'
+        +'<p style="font-size:12px;color:var(--slate-500);margin:0;">Com um e-mail real, o município passa a poder recuperar a senha sozinho por e-mail. Isso <strong>não</strong> altera a senha atual.</p>';
+      document.getElementById('mcFooter').innerHTML=
+        '<button class="btn btn--secondary" onclick="fecharModalConta()">Cancelar</button>'
+        +'<button class="btn btn--primary" id="mcBtn" onclick="confirmarTrocarEmail()">Salvar e-mail</button>';
+      document.getElementById('modalConta').classList.add('open');
+    }
+    async function confirmarTrocarEmail() {
+      const email=document.getElementById('mcEmailNovo').value.trim().toLowerCase();
+      if(!/.+@.+\..+/.test(email)){ _mcMsg('Informe um e-mail válido.', true); return; }
+      const btn=document.getElementById('mcBtn'); btn.disabled=true; btn.textContent='Salvando…';
+      const r=await DB.Admin.trocarEmail({ userId:_emailCtx.userId, email:email });
+      btn.disabled=false; btn.textContent='Salvar e-mail';
+      if(r && r.ok){ _resultadoConta('E-mail atualizado!', _emailCtx.nome, email, null); renderGerenciarUsuarios(); }
+      else { _mcMsg((r&&r.erro)||'Falha ao trocar o e-mail.', true); }
     }
   </script>
 </body>
