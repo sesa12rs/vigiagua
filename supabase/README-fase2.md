@@ -144,3 +144,63 @@ rodar `await DB.Sync.pull()` seguido de checagens:
 Se o município ainda enxergar a chave de outro, confira se as políticas
 antigas (`va_store_select`) foram realmente removidas — o bloco novo já
 faz `drop policy if exists` delas, então basta reexecutá-lo.
+
+---
+
+## Painel de usuários (Fase 2) — deploy da Edge Function `admin-usuarios`
+
+Permite que a **Regional crie municípios e resete senhas direto pelo sistema**
+(aba Administração → "Acesso dos usuários"), sem abrir o painel do Supabase.
+
+A função guarda a chave-mestra (`service_role`) **no servidor** — nunca no
+navegador — e só executa se quem chamou for a Regional.
+
+### Passo a passo (só uma vez)
+
+1. **Instale a CLI do Supabase** (uma vez, na sua máquina):
+   - macOS: `brew install supabase/tap/supabase`
+   - ou via npm: `npm install -g supabase`
+
+2. **Faça login e conecte ao projeto:**
+   ```
+   supabase login
+   supabase link --project-ref usxaxdbxecdcbnxpkkhx
+   ```
+   (o `project-ref` é a parte do meio da Project URL:
+   `https://usxaxdbxecdcbnxpkkhx.supabase.co`)
+
+3. **Publique a função** (a partir da raiz do projeto, onde está a pasta `supabase/`):
+   ```
+   supabase functions deploy admin-usuarios
+   ```
+
+   Pronto. A função fica disponível em
+   `https://usxaxdbxecdcbnxpkkhx.supabase.co/functions/v1/admin-usuarios`
+   e o painel do sistema passa a funcionar.
+
+> **Variáveis de ambiente:** não precisa configurar nada. O Supabase injeta
+> automaticamente `SUPABASE_URL`, `SUPABASE_ANON_KEY` e
+> `SUPABASE_SERVICE_ROLE_KEY` nas Edge Functions.
+
+### Como usar (Regional, dentro do sistema)
+
+- **Aba Administração → "Acesso dos usuários" → Atualizar lista.**
+- **Criar conta:** escolha e-mail automático (fake) ou informe um e-mail real,
+  confirme a senha temporária e clique em "Criar conta". Repasse a senha ao
+  município — ele define a própria senha no 1º acesso.
+- **Resetar senha:** gera uma nova senha temporária; o município troca no
+  próximo acesso.
+
+### Recuperação de senha
+
+- Contas com **e-mail real** podem usar a recuperação automática por e-mail do
+  Supabase (link enviado ao endereço).
+- Contas com **e-mail fake**: a recuperação é feita pela Regional com o botão
+  "Resetar senha" no painel.
+
+### Segurança / continuidade
+
+- A função só aceita chamadas de quem tem perfil `regional` na tabela `usuarios`.
+- O projeto Supabase continua precisando de um **dono na organização** (conta,
+  cobrança). Ao repassar o sistema, transfira o acesso ao projeto e mantenha
+  este guia junto.

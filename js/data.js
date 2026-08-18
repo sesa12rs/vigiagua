@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v85';
+  window.VIGIAGUA_VERSAO = 'fase2-v86';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -844,7 +844,8 @@ const DB = (() => {
         return { ok: false, erro: 'Usuário autenticado, mas o perfil não pôde ser lido.' + detalhe };
       }
       const u = rows[0];
-      const sessao = { userId: u.id, perfil: u.perfil, nome: u.nome, municipioId: u.municipio_id };
+      const precisaDefinirSenha = (data.user.user_metadata && data.user.user_metadata.senhaDefinida === false) || false;
+      const sessao = { userId: u.id, perfil: u.perfil, nome: u.nome, municipioId: u.municipio_id, precisaDefinirSenha };
       // Troca de conta na mesma máquina → limpa o cache do usuário anterior
       // ANTES do pull, para o novo usuário começar com dados limpos.
       const anterior = get('va_session');
@@ -874,6 +875,18 @@ const DB = (() => {
       try { await cli.auth.signInWithPassword({ email, password: novaSenha }); } catch (e) {}
       return { ok: true };
     },
+    // Define a senha no 1º acesso (usuário recém-autenticado com senha temporária;
+    // não pede a senha atual). Marca senhaDefinida=true e reautentica.
+    async definirSenha(novaSenha) {
+      const cli = Sync.client();
+      let email = null;
+      try { const { data } = await cli.auth.getUser(); email = data && data.user && data.user.email; } catch (e) {}
+      const up = await cli.auth.updateUser({ password: novaSenha, data: { senhaDefinida: true } });
+      if (up.error) return { ok: false, erro: up.error.message || 'Não foi possível definir a senha.' };
+      if (email) { try { await cli.auth.signInWithPassword({ email, password: novaSenha }); } catch (e) {} }
+      const sess = get('va_session'); if (sess) { sess.precisaDefinirSenha = false; set('va_session', sess); }
+      return { ok: true };
+    },
   };
 
   // Login unificado: Supabase quando ativo, demo local caso contrário.
@@ -890,9 +903,61 @@ const DB = (() => {
     if (!Sync.habilitado()) return { ok: false, erro: 'A troca de senha está disponível apenas no modo online (Supabase).' };
     return AuthSupabase.trocarSenha(senhaAtual, novaSenha);
   };
+  Auth.definirSenhaAsync = async function (novaSenha) {
+    if (!Sync.habilitado()) return { ok: false, erro: 'Disponível apenas no modo online (Supabase).' };
+    return AuthSupabase.definirSenha(novaSenha);
+  };
+
+  // ── Administração de usuários (Regional) via Edge Function admin-usuarios ──
+  const Admin = {
+    _url() {
+      const cfg = (typeof window !== 'undefined' && window.VIGIAGUA_SUPABASE) || {};
+      const base = String(cfg.url || '').replace(/\/+$/, '');
+      return base ? `${base}/functions/v1/admin-usuarios` : '';
+    },
+    async _chamar(acao, payload) {
+      if (!Sync.habilitado()) return { ok: false, erro: 'Disponível apenas no modo online (Supabase).' };
+      const url = this._url();
+      if (!url) return { ok: false, erro: 'URL do Supabase não configurada.' };
+      const cli = Sync.client();
+      const { data: sess } = await cli.auth.getSession();
+      const token = sess && sess.session && sess.session.access_token;
+      if (!token) return { ok: false, erro: 'Sessão expirada. Entre novamente.' };
+      try {
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(Object.assign({ acao }, payload || {})),
+        });
+        const out = await resp.json().catch(() => ({}));
+        if (!resp.ok || !out.ok) return { ok: false, erro: out.erro || `Falha (HTTP ${resp.status}).` };
+        return out;
+      } catch (e) {
+        return { ok: false, erro: 'Não foi possível contatar o servidor: ' + (e.message || e) };
+      }
+    },
+    criarUsuario(dados)  { return this._chamar('criar', dados); },
+    resetarSenha(dados)  { return this._chamar('resetar', dados); },
+    trocarEmail(dados)   { return this._chamar('trocar_email', dados); },
+    // Lê a tabela usuarios (RLS permite a Regional). Retorna [] no modo demo.
+    async listarContas() {
+      if (!Sync.habilitado()) return [];
+      const cli = Sync.client();
+      const { data, error } = await cli.from('usuarios').select('id, email, nome, perfil, municipio_id, municipio_nome');
+      if (error) return [];
+      return data || [];
+    },
+    // Gera uma senha temporária legível (para a Regional repassar).
+    gerarSenhaTemp() {
+      const abc = 'abcdefghijkmnpqrstuvwxyz';
+      const num = '23456789';
+      const p = n => Array.from({ length: n }, () => abc[Math.floor(Math.random() * abc.length)]).join('');
+      return `${p(3)}${num[Math.floor(Math.random() * num.length)]}${num[Math.floor(Math.random() * num.length)]}${p(3)}`;
+    },
+  };
 
   _syncRef = Sync;
-  return { Auth, Usuarios, Municipios, Config, Semanas, Feriados, Plano, MunPlano, Sync, limparCacheDados };
+  return { Auth, Usuarios, Municipios, Config, Semanas, Feriados, Plano, MunPlano, Sync, Admin, limparCacheDados };
 })();
 
 // Exposição explícita no window (const de script clássico não vira window.DB sozinho)

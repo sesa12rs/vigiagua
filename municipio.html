@@ -641,12 +641,14 @@
     <div class="modal" style="max-width:420px;">
       <div class="modal__header">
         <h3 class="modal__title">🔑 Trocar senha</h3>
-        <button class="modal__close" onclick="fecharTrocaSenha()">✕</button>
+        <button class="modal__close" id="tsClose" onclick="fecharTrocaSenha()">✕</button>
       </div>
       <div class="modal__body">
         <div id="trocaSenhaMsg" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;font-size:13px;"></div>
+        <div id="tsAtualWrap">
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Senha atual</label>
         <input type="password" id="tsAtual" autocomplete="current-password" style="width:100%;margin-bottom:12px;padding:8px 10px;border:1px solid var(--slate-300);border-radius:8px;">
+        </div>
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Nova senha</label>
         <input type="password" id="tsNova" autocomplete="new-password" style="width:100%;margin-bottom:12px;padding:8px 10px;border:1px solid var(--slate-300);border-radius:8px;">
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Confirmar nova senha</label>
@@ -654,15 +656,24 @@
         <p style="font-size:12px;color:var(--slate-500);margin:10px 0 0;">Mínimo de 6 caracteres.</p>
       </div>
       <div class="modal__footer">
-        <button class="btn btn--secondary" onclick="fecharTrocaSenha()">Cancelar</button>
+        <button class="btn btn--secondary" id="tsCancel" onclick="fecharTrocaSenha()">Cancelar</button>
         <button class="btn btn--primary" id="tsBtn" onclick="confirmarTrocaSenha()">Salvar nova senha</button>
       </div>
     </div>
   </div>
   <script>
-    function abrirTrocaSenha() {
+    var _modoSenha='trocar';
+    function abrirTrocaSenha(modo) {
+      _modoSenha = (modo==='definir') ? 'definir' : 'trocar';
       ['tsAtual','tsNova','tsConfirma'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
       const m=document.getElementById('trocaSenhaMsg'); if(m) m.style.display='none';
+      const definir = _modoSenha==='definir';
+      const wrap=document.getElementById('tsAtualWrap'); if(wrap) wrap.style.display = definir ? 'none' : '';
+      const close=document.getElementById('tsClose'); if(close) close.style.display = definir ? 'none' : '';
+      const cancel=document.getElementById('tsCancel'); if(cancel) cancel.style.display = definir ? 'none' : '';
+      const titulo=document.querySelector('#modalTrocaSenha .modal__title'); if(titulo) titulo.textContent = definir ? '🔐 Defina sua senha (1º acesso)' : '🔑 Trocar senha';
+      const btn=document.getElementById('tsBtn'); if(btn) btn.textContent = definir ? 'Definir senha' : 'Salvar nova senha';
+      if(definir){ const msg=document.getElementById('trocaSenhaMsg'); msg.style.display='block'; msg.style.background='#eff6ff'; msg.style.color='#1e3a8a'; msg.textContent='Por segurança, defina uma senha pessoal para continuar.'; }
       document.getElementById('modalTrocaSenha').classList.add('open');
     }
     function fecharTrocaSenha() { document.getElementById('modalTrocaSenha').classList.remove('open'); }
@@ -673,20 +684,27 @@
       m.style.color = erro ? '#b91c1c' : '#15803d';
     }
     async function confirmarTrocaSenha() {
+      const definir = _modoSenha==='definir';
       const atual=document.getElementById('tsAtual').value;
       const nova=document.getElementById('tsNova').value;
       const conf=document.getElementById('tsConfirma').value;
-      if(!atual||!nova){ _tsMsg('Preencha a senha atual e a nova senha.', true); return; }
+      if(!definir && !atual){ _tsMsg('Preencha a senha atual.', true); return; }
+      if(!nova){ _tsMsg('Preencha a nova senha.', true); return; }
       if(nova.length<6){ _tsMsg('A nova senha precisa ter ao menos 6 caracteres.', true); return; }
       if(nova!==conf){ _tsMsg('A confirmação não confere com a nova senha.', true); return; }
       const btn=document.getElementById('tsBtn'); btn.disabled=true; const txt=btn.textContent; btn.textContent='Salvando...';
       try {
-        const r=await DB.Auth.trocarSenhaAsync(atual, nova);
-        if(r && r.ok){ _tsMsg('Senha alterada com sucesso!', false); setTimeout(fecharTrocaSenha, 1200); }
-        else { _tsMsg((r && r.erro) || 'Não foi possível alterar a senha.', true); }
+        const r = definir ? await DB.Auth.definirSenhaAsync(nova) : await DB.Auth.trocarSenhaAsync(atual, nova);
+        if(r && r.ok){ _tsMsg(definir ? 'Senha definida! Bem-vindo(a).' : 'Senha alterada com sucesso!', false); setTimeout(fecharTrocaSenha, 1200); }
+        else { _tsMsg((r && r.erro) || 'Não foi possível salvar a senha.', true); }
       } catch(e){ _tsMsg('Erro: '+(e.message||e), true); }
       btn.disabled=false; btn.textContent=txt;
     }
+    // 1º acesso: se a conta foi criada/resetada, obriga a definir a senha (fail-open).
+    try {
+      var _s = (window.DB && DB.Auth && DB.Auth.sessaoAtual) ? DB.Auth.sessaoAtual() : null;
+      if (_s && _s.precisaDefinirSenha) setTimeout(function(){ try { abrirTrocaSenha('definir'); } catch(e){} }, 400);
+    } catch(e){}
   </script>
 
 </body>

@@ -1190,6 +1190,16 @@
         A restauração repõe as chaves do arquivo (não apaga o que foi criado depois do backup). Para agendamento automático, veja também os backups no painel do Supabase (documentado em <code>supabase/README-fase2.md</code>).
       </p>
     </div>
+    <div class="card" style="margin-top:16px;border:1px solid var(--slate-200);" id="cardUsuarios">
+      <h2 style="margin:0 0 4px;font-family:var(--font-display);font-size:17px;color:var(--slate-800);">👥 Acesso dos usuários</h2>
+      <p style="margin:0 0 12px;color:var(--slate-500);font-size:13px;">
+        Crie as contas dos municípios e redefina senhas pelo próprio sistema. Ao criar ou resetar, o sistema gera uma <strong>senha temporária</strong> para você repassar — no primeiro acesso o município define a senha dele.
+        <br><span style="color:var(--slate-400);font-size:12px;">Requer a função de administração publicada no Supabase (ver guia de manutenção).</span>
+      </p>
+      <div id="usuariosAviso" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;font-size:12.5px;"></div>
+      <div style="margin-bottom:12px;"><button class="btn btn--secondary btn--sm" onclick="renderGerenciarUsuarios()">🔄 Atualizar lista</button></div>
+      <div id="listaUsuarios" style="font-size:13px;color:var(--slate-500);overflow-x:auto;">Clique em "Atualizar lista" para carregar as contas.</div>
+    </div>
   </div><!-- /tab6 -->
 
 </main>
@@ -1300,12 +1310,14 @@
     <div class="modal" style="max-width:420px;">
       <div class="modal__header">
         <h3 class="modal__title">🔑 Trocar senha</h3>
-        <button class="modal__close" onclick="fecharTrocaSenha()">✕</button>
+        <button class="modal__close" id="tsClose" onclick="fecharTrocaSenha()">✕</button>
       </div>
       <div class="modal__body">
         <div id="trocaSenhaMsg" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;font-size:13px;"></div>
+        <div id="tsAtualWrap">
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Senha atual</label>
         <input type="password" id="tsAtual" autocomplete="current-password" style="width:100%;margin-bottom:12px;padding:8px 10px;border:1px solid var(--slate-300);border-radius:8px;">
+        </div>
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Nova senha</label>
         <input type="password" id="tsNova" autocomplete="new-password" style="width:100%;margin-bottom:12px;padding:8px 10px;border:1px solid var(--slate-300);border-radius:8px;">
         <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Confirmar nova senha</label>
@@ -1313,15 +1325,24 @@
         <p style="font-size:12px;color:var(--slate-500);margin:10px 0 0;">Mínimo de 6 caracteres.</p>
       </div>
       <div class="modal__footer">
-        <button class="btn btn--secondary" onclick="fecharTrocaSenha()">Cancelar</button>
+        <button class="btn btn--secondary" id="tsCancel" onclick="fecharTrocaSenha()">Cancelar</button>
         <button class="btn btn--primary" id="tsBtn" onclick="confirmarTrocaSenha()">Salvar nova senha</button>
       </div>
     </div>
   </div>
   <script>
-    function abrirTrocaSenha() {
+    var _modoSenha='trocar';
+    function abrirTrocaSenha(modo) {
+      _modoSenha = (modo==='definir') ? 'definir' : 'trocar';
       ['tsAtual','tsNova','tsConfirma'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
       const m=document.getElementById('trocaSenhaMsg'); if(m) m.style.display='none';
+      const definir = _modoSenha==='definir';
+      const wrap=document.getElementById('tsAtualWrap'); if(wrap) wrap.style.display = definir ? 'none' : '';
+      const close=document.getElementById('tsClose'); if(close) close.style.display = definir ? 'none' : '';
+      const cancel=document.getElementById('tsCancel'); if(cancel) cancel.style.display = definir ? 'none' : '';
+      const titulo=document.querySelector('#modalTrocaSenha .modal__title'); if(titulo) titulo.textContent = definir ? '🔐 Defina sua senha (1º acesso)' : '🔑 Trocar senha';
+      const btn=document.getElementById('tsBtn'); if(btn) btn.textContent = definir ? 'Definir senha' : 'Salvar nova senha';
+      if(definir){ const msg=document.getElementById('trocaSenhaMsg'); msg.style.display='block'; msg.style.background='#eff6ff'; msg.style.color='#1e3a8a'; msg.textContent='Por segurança, defina uma senha pessoal para continuar.'; }
       document.getElementById('modalTrocaSenha').classList.add('open');
     }
     function fecharTrocaSenha() { document.getElementById('modalTrocaSenha').classList.remove('open'); }
@@ -1332,21 +1353,132 @@
       m.style.color = erro ? '#b91c1c' : '#15803d';
     }
     async function confirmarTrocaSenha() {
+      const definir = _modoSenha==='definir';
       const atual=document.getElementById('tsAtual').value;
       const nova=document.getElementById('tsNova').value;
       const conf=document.getElementById('tsConfirma').value;
-      if(!atual||!nova){ _tsMsg('Preencha a senha atual e a nova senha.', true); return; }
+      if(!definir && !atual){ _tsMsg('Preencha a senha atual.', true); return; }
+      if(!nova){ _tsMsg('Preencha a nova senha.', true); return; }
       if(nova.length<6){ _tsMsg('A nova senha precisa ter ao menos 6 caracteres.', true); return; }
       if(nova!==conf){ _tsMsg('A confirmação não confere com a nova senha.', true); return; }
       const btn=document.getElementById('tsBtn'); btn.disabled=true; const txt=btn.textContent; btn.textContent='Salvando...';
       try {
-        const r=await DB.Auth.trocarSenhaAsync(atual, nova);
-        if(r && r.ok){ _tsMsg('Senha alterada com sucesso!', false); setTimeout(fecharTrocaSenha, 1200); }
-        else { _tsMsg((r && r.erro) || 'Não foi possível alterar a senha.', true); }
+        const r = definir ? await DB.Auth.definirSenhaAsync(nova) : await DB.Auth.trocarSenhaAsync(atual, nova);
+        if(r && r.ok){ _tsMsg(definir ? 'Senha definida! Bem-vindo(a).' : 'Senha alterada com sucesso!', false); setTimeout(fecharTrocaSenha, 1200); }
+        else { _tsMsg((r && r.erro) || 'Não foi possível salvar a senha.', true); }
       } catch(e){ _tsMsg('Erro: '+(e.message||e), true); }
       btn.disabled=false; btn.textContent=txt;
     }
+    // 1º acesso: se a conta foi criada/resetada, obriga a definir a senha (fail-open).
+    try {
+      var _s = (window.DB && DB.Auth && DB.Auth.sessaoAtual) ? DB.Auth.sessaoAtual() : null;
+      if (_s && _s.precisaDefinirSenha) setTimeout(function(){ try { abrirTrocaSenha('definir'); } catch(e){} }, 400);
+    } catch(e){}
   </script>
 
+  <!-- Modal: criar conta / resultado (senha temporária) -->
+  <div class="modal-overlay" id="modalConta">
+    <div class="modal" style="max-width:470px;">
+      <div class="modal__header">
+        <h3 class="modal__title" id="mcTitulo">Criar conta</h3>
+        <button class="modal__close" onclick="fecharModalConta()">✕</button>
+      </div>
+      <div class="modal__body" id="mcBody"></div>
+      <div class="modal__footer" id="mcFooter"></div>
+    </div>
+  </div>
+  <script>
+    var _contaCtx = null;
+    function _emailAuto(nome) {
+      return nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'') + '@vigiagua.pr.gov.br';
+    }
+    function _usuariosAviso(txt, erro) {
+      const a=document.getElementById('usuariosAviso');
+      if(!txt){ a.style.display='none'; return; }
+      a.style.display='block'; a.textContent=txt;
+      a.style.background = erro ? '#fef2f2' : '#f0fdf4'; a.style.color = erro ? '#b91c1c' : '#15803d';
+    }
+    function fecharModalConta() { document.getElementById('modalConta').classList.remove('open'); }
+    async function renderGerenciarUsuarios() {
+      const lista=document.getElementById('listaUsuarios');
+      lista.textContent='Carregando…'; _usuariosAviso('');
+      let contas=[];
+      try { contas = await DB.Admin.listarContas(); } catch(e){}
+      const municipios = DB.Municipios.listar();
+      const porNome = {}; contas.forEach(c=>{ if(c.municipio_nome) porNome[c.municipio_nome]=c; });
+      let html='<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:520px;">'
+        +'<thead><tr style="text-align:left;border-bottom:2px solid var(--slate-200);color:var(--slate-600);">'
+        +'<th style="padding:6px 8px;">Município</th><th style="padding:6px 8px;">Conta</th><th style="padding:6px 8px;">E-mail</th><th style="padding:6px 8px;text-align:right;">Ação</th></tr></thead><tbody>';
+      municipios.forEach(m=>{
+        const c=porNome[m.nome];
+        const nomeJs=m.nome.replace(/'/g,"\\'");
+        const acao = c
+          ? '<button class="btn btn--ghost btn--sm" onclick="resetarSenhaUsuario(\''+c.id+'\',\''+nomeJs+'\')">🔑 Resetar senha</button>'
+          : '<button class="btn btn--secondary btn--sm" onclick="abrirCriarConta(\''+nomeJs+'\','+m.id+')">➕ Criar conta</button>';
+        html+='<tr style="border-bottom:1px solid var(--slate-100);"><td style="padding:6px 8px;font-weight:600;color:var(--slate-800);">'+m.nome+'</td>'
+          +'<td style="padding:6px 8px;">'+(c?'<span style="color:#15803d;">✓ criada</span>':'<span style="color:var(--slate-400);">— sem conta</span>')+'</td>'
+          +'<td style="padding:6px 8px;color:var(--slate-500);">'+(c?(c.email||''):'')+'</td>'
+          +'<td style="padding:6px 8px;text-align:right;">'+acao+'</td></tr>';
+      });
+      html+='</tbody></table>';
+      lista.innerHTML=html;
+    }
+    function abrirCriarConta(nome, municipioId) {
+      _contaCtx = { nome:nome, municipioId:municipioId };
+      const emailAuto=_emailAuto(nome), temp=DB.Admin.gerarSenhaTemp();
+      document.getElementById('mcTitulo').textContent='Criar conta — '+nome;
+      document.getElementById('mcBody').innerHTML=
+        '<div id="mcMsg" style="display:none;margin-bottom:10px;padding:8px 10px;border-radius:6px;font-size:12.5px;"></div>'
+        +'<label style="font-size:13px;font-weight:600;">E-mail do município</label>'
+        +'<div style="margin:6px 0 12px;font-size:13px;">'
+        +'<label style="display:block;margin-bottom:6px;"><input type="radio" name="mcEmailModo" value="auto" checked onchange="_mcAtualizaEmail()"> Automático: <span id="mcEmailAuto" style="font-family:monospace;">'+emailAuto+'</span></label>'
+        +'<label style="display:block;"><input type="radio" name="mcEmailModo" value="real" onchange="_mcAtualizaEmail()"> Informar e-mail real (permite recuperação por e-mail):</label>'
+        +'<input type="email" id="mcEmailReal" placeholder="email@dominio.com" disabled style="width:100%;margin-top:6px;padding:7px 9px;border:1px solid var(--slate-300);border-radius:8px;">'
+        +'</div>'
+        +'<label style="font-size:13px;font-weight:600;">Senha temporária</label>'
+        +'<input type="text" id="mcSenha" value="'+temp+'" style="width:100%;margin:6px 0 4px;padding:7px 9px;border:1px solid var(--slate-300);border-radius:8px;font-family:monospace;">'
+        +'<p style="font-size:12px;color:var(--slate-500);margin:0;">Repasse esta senha ao município. Ele definirá a senha dele no 1º acesso.</p>';
+      document.getElementById('mcFooter').innerHTML=
+        '<button class="btn btn--secondary" onclick="fecharModalConta()">Cancelar</button>'
+        +'<button class="btn btn--primary" id="mcBtn" onclick="confirmarCriarConta()">Criar conta</button>';
+      document.getElementById('modalConta').classList.add('open');
+    }
+    function _mcAtualizaEmail() {
+      const modo=document.querySelector('input[name="mcEmailModo"]:checked').value;
+      document.getElementById('mcEmailReal').disabled = (modo!=='real');
+    }
+    function _mcMsg(t,erro){ const m=document.getElementById('mcMsg'); if(!m) return; m.textContent=t; m.style.display='block'; m.style.background=erro?'#fef2f2':'#f0fdf4'; m.style.color=erro?'#b91c1c':'#15803d'; }
+    async function confirmarCriarConta() {
+      const modo=document.querySelector('input[name="mcEmailModo"]:checked').value;
+      const email=(modo==='real'?document.getElementById('mcEmailReal').value:document.getElementById('mcEmailAuto').textContent).trim().toLowerCase();
+      const senha=document.getElementById('mcSenha').value;
+      if(!/.+@.+\..+/.test(email)){ _mcMsg('Informe um e-mail válido.', true); return; }
+      if(senha.length<6){ _mcMsg('A senha temporária precisa ter ao menos 6 caracteres.', true); return; }
+      const btn=document.getElementById('mcBtn'); btn.disabled=true; btn.textContent='Criando…';
+      const r=await DB.Admin.criarUsuario({ nome:_contaCtx.nome, municipioId:_contaCtx.municipioId, municipioNome:_contaCtx.nome, email:email, senha:senha });
+      btn.disabled=false; btn.textContent='Criar conta';
+      if(r && r.ok){ _resultadoConta('Conta criada com sucesso!', _contaCtx.nome, email, senha); renderGerenciarUsuarios(); }
+      else { _mcMsg((r&&r.erro)||'Falha ao criar conta.', true); }
+    }
+    function resetarSenhaUsuario(userId, nome) {
+      if(!confirm('Resetar a senha de '+nome+'?\nSerá gerada uma senha temporária para você repassar.')) return;
+      const temp=DB.Admin.gerarSenhaTemp();
+      _usuariosAviso('Resetando…', false);
+      DB.Admin.resetarSenha({ userId:userId, senha:temp }).then(function(r){
+        if(r && r.ok){ _usuariosAviso(''); _resultadoConta('Senha resetada!', nome, null, temp); }
+        else { _usuariosAviso((r&&r.erro)||'Falha ao resetar a senha.', true); }
+      });
+    }
+    function _resultadoConta(titulo, nome, email, senha) {
+      document.getElementById('mcTitulo').textContent=titulo;
+      document.getElementById('mcBody').innerHTML=
+        '<p style="font-size:13px;color:var(--slate-700);margin:0 0 10px;">Repasse estes dados a <strong>'+nome+'</strong>:</p>'
+        +(email?('<div style="font-size:13px;margin-bottom:6px;">E-mail: <span style="font-family:monospace;">'+email+'</span></div>'):'')
+        +'<div style="font-size:13px;">Senha temporária: <span style="font-family:monospace;font-size:15px;background:var(--slate-100);padding:2px 8px;border-radius:6px;">'+senha+'</span></div>'
+        +'<p style="font-size:12px;color:var(--slate-500);margin:12px 0 0;">No primeiro acesso, o município será obrigado a definir a própria senha.</p>';
+      document.getElementById('mcFooter').innerHTML='<button class="btn btn--primary" onclick="fecharModalConta()">Fechar</button>';
+      document.getElementById('modalConta').classList.add('open');
+    }
+  </script>
 </body>
 </html>
