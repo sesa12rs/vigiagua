@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v84';
+  window.VIGIAGUA_VERSAO = 'fase2-v85';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -868,6 +868,10 @@ const DB = (() => {
       if (v.error) return { ok: false, erro: 'Senha atual incorreta.' };
       const up = await cli.auth.updateUser({ password: novaSenha, data: { senhaDefinida: true } });
       if (up.error) return { ok: false, erro: up.error.message || 'Não foi possível alterar a senha.' };
+      // Trocar a senha invalida o token da sessão anterior — reautentica com a
+      // NOVA senha para manter uma sessão válida (senão o auto-save ao sair falha
+      // com "sem sessão de login").
+      try { await cli.auth.signInWithPassword({ email, password: novaSenha }); } catch (e) {}
       return { ok: true };
     },
   };

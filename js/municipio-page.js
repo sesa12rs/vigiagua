@@ -77,6 +77,9 @@
     if (sessao.perfil === 'regional') {
       const btnVoltar = document.getElementById('btnVoltarPlanner');
       if (btnVoltar) btnVoltar.style.display = '';
+      // A Regional troca a própria senha no planner — esconde o botão aqui.
+      const btnSenha = document.getElementById('btnTrocaSenha');
+      if (btnSenha) btnSenha.style.display = 'none';
       const alvo = new URLSearchParams(location.search).get('municipio');
       if (alvo) {
         const sel = document.getElementById('municipio');
