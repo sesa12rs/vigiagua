@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v83';
+  window.VIGIAGUA_VERSAO = 'fase2-v84';
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
@@ -857,6 +857,19 @@ const DB = (() => {
       try { const cli = Sync.client(); if (cli) await cli.auth.signOut(); } catch (e) {}
       limparCacheDados();              // esvazia o cache va_ (preserva o lembrete de backup)
     },
+    // Troca a própria senha (usuário logado). Verifica a senha atual reautenticando,
+    // depois define a nova e marca senhaDefinida=true (usado no "definir no 1º acesso").
+    async trocarSenha(senhaAtual, novaSenha) {
+      const cli = Sync.client();
+      let email = null;
+      try { const { data } = await cli.auth.getUser(); email = data && data.user && data.user.email; } catch (e) {}
+      if (!email) return { ok: false, erro: 'Sessão expirada. Entre novamente.' };
+      const v = await cli.auth.signInWithPassword({ email, password: senhaAtual });
+      if (v.error) return { ok: false, erro: 'Senha atual incorreta.' };
+      const up = await cli.auth.updateUser({ password: novaSenha, data: { senhaDefinida: true } });
+      if (up.error) return { ok: false, erro: up.error.message || 'Não foi possível alterar a senha.' };
+      return { ok: true };
+    },
   };
 
   // Login unificado: Supabase quando ativo, demo local caso contrário.
@@ -868,6 +881,10 @@ const DB = (() => {
   Auth.logoutAsync = async function () {
     if (Sync.habilitado()) return AuthSupabase.logout();
     this.logout();
+  };
+  Auth.trocarSenhaAsync = async function (senhaAtual, novaSenha) {
+    if (!Sync.habilitado()) return { ok: false, erro: 'A troca de senha está disponível apenas no modo online (Supabase).' };
+    return AuthSupabase.trocarSenha(senhaAtual, novaSenha);
   };
 
   _syncRef = Sync;

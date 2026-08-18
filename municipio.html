@@ -372,6 +372,7 @@
         <span id="nomeUsuario">—</span>
       </span>
       <a href="planner.html" class="topbar__btn" id="btnVoltarPlanner" style="display:none;text-decoration:none;">← Planejamento</a>
+      <button class="topbar__btn" onclick="abrirTrocaSenha()">🔑 Senha</button>
       <button class="topbar__btn" onclick="sair()">🚪 Sair</button>
     </div>
   </header>
@@ -635,5 +636,58 @@
   <script src="js/utils.js"></script>
   <script src="js/planner.js"></script>
   <script src="js/municipio-page.js"></script>
+  <!-- Modal: trocar senha (self-service) -->
+  <div class="modal-overlay" id="modalTrocaSenha">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal__header">
+        <h3 class="modal__title">🔑 Trocar senha</h3>
+        <button class="modal__close" onclick="fecharTrocaSenha()">✕</button>
+      </div>
+      <div class="modal__body">
+        <div id="trocaSenhaMsg" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;font-size:13px;"></div>
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Senha atual</label>
+        <input type="password" id="tsAtual" autocomplete="current-password" style="width:100%;margin-bottom:12px;padding:8px 10px;border:1px solid var(--slate-300);border-radius:8px;">
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Nova senha</label>
+        <input type="password" id="tsNova" autocomplete="new-password" style="width:100%;margin-bottom:12px;padding:8px 10px;border:1px solid var(--slate-300);border-radius:8px;">
+        <label style="display:block;font-size:13px;font-weight:600;margin-bottom:4px;">Confirmar nova senha</label>
+        <input type="password" id="tsConfirma" autocomplete="new-password" style="width:100%;padding:8px 10px;border:1px solid var(--slate-300);border-radius:8px;">
+        <p style="font-size:12px;color:var(--slate-500);margin:10px 0 0;">Mínimo de 6 caracteres.</p>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--secondary" onclick="fecharTrocaSenha()">Cancelar</button>
+        <button class="btn btn--primary" id="tsBtn" onclick="confirmarTrocaSenha()">Salvar nova senha</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    function abrirTrocaSenha() {
+      ['tsAtual','tsNova','tsConfirma'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+      const m=document.getElementById('trocaSenhaMsg'); if(m) m.style.display='none';
+      document.getElementById('modalTrocaSenha').classList.add('open');
+    }
+    function fecharTrocaSenha() { document.getElementById('modalTrocaSenha').classList.remove('open'); }
+    function _tsMsg(t, erro) {
+      const m=document.getElementById('trocaSenhaMsg');
+      m.textContent=t; m.style.display='block';
+      m.style.background = erro ? '#fef2f2' : '#f0fdf4';
+      m.style.color = erro ? '#b91c1c' : '#15803d';
+    }
+    async function confirmarTrocaSenha() {
+      const atual=document.getElementById('tsAtual').value;
+      const nova=document.getElementById('tsNova').value;
+      const conf=document.getElementById('tsConfirma').value;
+      if(!atual||!nova){ _tsMsg('Preencha a senha atual e a nova senha.', true); return; }
+      if(nova.length<6){ _tsMsg('A nova senha precisa ter ao menos 6 caracteres.', true); return; }
+      if(nova!==conf){ _tsMsg('A confirmação não confere com a nova senha.', true); return; }
+      const btn=document.getElementById('tsBtn'); btn.disabled=true; const txt=btn.textContent; btn.textContent='Salvando...';
+      try {
+        const r=await DB.Auth.trocarSenhaAsync(atual, nova);
+        if(r && r.ok){ _tsMsg('Senha alterada com sucesso!', false); setTimeout(fecharTrocaSenha, 1200); }
+        else { _tsMsg((r && r.erro) || 'Não foi possível alterar a senha.', true); }
+      } catch(e){ _tsMsg('Erro: '+(e.message||e), true); }
+      btn.disabled=false; btn.textContent=txt;
+    }
+  </script>
+
 </body>
 </html>
