@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Bitcoin - Simples e Funcional</title>
+    <!-- Tailwind CSS para estilização rápida -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js para os gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto space-y-6">
+        <!-- Cabeçalho -->
+        <header class="flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-4 gap-4">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                🪙 <span class="text-amber-500">Bitcoin</span> Dashboard
+            </h1>
+            <div id="status" class="text-sm bg-slate-900 px-3 py-1 rounded-full border border-slate-800 text-slate-400">
+                Carregando dados da API...
+            </div>
+        </header>
+
+        <!-- Cards de Resumo (KPIs) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
+                <p class="text-sm text-slate-400">Preço Atual (USD)</p>
+                <h2 id="current-price" class="text-3xl font-extrabold mt-1 text-white">--</h2>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
+                <p class="text-sm text-slate-400">Variação (24h)</p>
+                <h2 id="price-change-24h" class="text-3xl font-extrabold mt-1">--</h2>
+            </div>
+        </div>
+
+        <!-- Grade de Gráficos -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Gráfico Semanal -->
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
+                <h3 class="text-lg font-semibold mb-4 text-slate-200">Variação Semanal (7 Dias)</h3>
+                <div class="relative h-72">
+                    <canvas id="weeklyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Gráfico Anual -->
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-lg">
+                <h3 class="text-lg font-semibold mb-4 text-slate-200">Variação Anual (365 Dias)</h3>
+                <div class="relative h-72">
+                    <canvas id="annualChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de Integração -->
+    <script>
+        const API_URL = 'https://api.coingecko.com/api/v3';
+
+        async function fetchDashboardData() {
+            const statusEl = document.getElementById('status');
+            try {
+                // 1. Buscar Preço Atual e 24h
+                const resPrice = await fetch(`${API_URL}/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true`);
+                const dataPrice = await resPrice.json();
+                
+                const price = dataPrice.bitcoin.usd;
+                const change24h = dataPrice.bitcoin.usd_24h_change;
+
+                document.getElementById('current-price').innerText = `$ ${price.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+                
+                const changeEl = document.getElementById('price-change-24h');
+                changeEl.innerText = `${change24h.toFixed(2)}%`;
+                changeEl.className = `text-3xl font-extrabold mt-1 ${change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+
+                // 2. Buscar Dados Semanais (7 dias)
+                const resWeekly = await fetch(`${API_URL}/coins/bitcoin/market_chart?vs_currency=usd&days=7`);
+                const dataWeekly = await resWeekly.json();
+                renderChart('weeklyChart', dataWeekly.prices, '#f7931a', 'Dia');
+
+                // 3. Buscar Dados Anuais (365 dias)
+                const resAnnual = await fetch(`${API_URL}/coins/bitcoin/market_chart?vs_currency=usd&days=365`);
+                const dataAnnual = await resAnnual.json();
+                renderChart('annualChart', dataAnnual.prices, '#3b82f6', 'Mês/Ano');
+
+                statusEl.innerText = '🟢 Conectado (Dados atualizados)';
+                statusEl.className = 'text-sm bg-emerald-950/50 px-3 py-1 rounded-full border border-emerald-800 text-emerald-400';
+
+            } catch (error) {
+                console.error("Erro ao carregar API:", error);
+                statusEl.innerText = '🔴 Erro ao buscar dados (Limite excedido ou sem conexão)';
+                statusEl.className = 'text-sm bg-rose-950/50 px-3 py-1 rounded-full border border-rose-800 text-rose-400';
+            }
+        }
+
+        function renderChart(canvasId, rawPrices, color, labelUnit) {
+            const labels = rawPrices.map(item => {
+                const date = new Date(item[0]);
+                return date.toLocaleDateString('pt-BR');
+            });
+            const prices = rawPrices.map(item => item[1]);
+
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            // Destriza gráfico anterior se houver redimensionamento
+            if (window[canvasId] instanceof Chart) {
+                window[canvasId].destroy();
+            }
+
+            window[canvasId] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Preço (USD)',
+                        data: prices,
+                        borderColor: color,
+                        backgroundColor: color + '15',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 0,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#64748b', maxTicksLimit: 6 }
+                        },
+                        y: {
+                            grid: { color: '#1e293b' },
+                            ticks: { color: '#64748b' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Executar carregamento ao abrir a página
+        fetchDashboardData();
+    </script>
+</body>
+</html>
