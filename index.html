@@ -191,6 +191,7 @@
         </button>
         <div style="text-align:center;margin-top:10px;">
           <a href="#" id="toggleLoginModo" onclick="alternarModoLogin(event)" style="font-size:12.5px;color:var(--blue-700);text-decoration:none;">entrar com e-mail</a>
+          <a href="#" onclick="abrirAjuda('municipio');return false;" style="font-size:12.5px;color:var(--slate-500);text-decoration:none;margin-left:14px;">❓ Ajuda</a>
         </div>
       </div>
     </div>
@@ -203,6 +204,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="js/supabase-config.js"></script>
   <script src="js/data.js"></script>
+  <script src="js/ajuda.js"></script>
   <script>
     // Redirecionar se já logado
     const s = DB.Auth.sessaoAtual();
@@ -280,5 +282,20 @@
       if (e.key === 'Enter') fazerLogin();
     });
   </script>
+  <!-- Modal: Ajuda -->
+  <div class="modal-overlay" id="modalAjuda">
+    <div class="modal" style="max-width:640px;">
+      <div class="modal__header">
+        <h3 class="modal__title">❓ Ajuda</h3>
+        <button class="modal__close" onclick="fecharAjuda()">✕</button>
+      </div>
+      <div class="modal__body">
+        <div class="ajuda-conteudo" id="ajudaConteudo"></div>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--primary" onclick="fecharAjuda()">Fechar</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

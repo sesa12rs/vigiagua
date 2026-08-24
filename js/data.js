@@ -16,7 +16,7 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v89';
+  window.VIGIAGUA_VERSAO = 'fase2-v90';
   // Recurso de e-mail real dos municípios: login "entrar com e-mail", botão
   // "Trocar e-mail" no painel e a opção de e-mail real ao criar conta.
   // false = oculto/desativado (municípios usam só o e-mail automático + login pela lista).

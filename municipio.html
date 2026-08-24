@@ -372,6 +372,7 @@
         <span id="nomeUsuario">—</span>
       </span>
       <a href="planner.html" class="topbar__btn" id="btnVoltarPlanner" style="display:none;text-decoration:none;">← Planejamento</a>
+      <button class="topbar__btn" onclick="abrirAjuda('municipio')">❓ Ajuda</button>
       <button class="topbar__btn" id="btnTrocaSenha" onclick="abrirTrocaSenha()">🔑 Senha</button>
       <button class="topbar__btn" onclick="sair()">🚪 Sair</button>
     </div>
@@ -633,6 +634,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="js/supabase-config.js"></script>
 <script src="js/data.js"></script>
+  <script src="js/ajuda.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/planner.js"></script>
   <script src="js/municipio-page.js"></script>
@@ -707,5 +709,20 @@
     } catch(e){}
   </script>
 
+  <!-- Modal: Ajuda -->
+  <div class="modal-overlay" id="modalAjuda">
+    <div class="modal" style="max-width:640px;">
+      <div class="modal__header">
+        <h3 class="modal__title">❓ Ajuda</h3>
+        <button class="modal__close" onclick="fecharAjuda()">✕</button>
+      </div>
+      <div class="modal__body">
+        <div class="ajuda-conteudo" id="ajudaConteudo"></div>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--primary" onclick="fecharAjuda()">Fechar</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
