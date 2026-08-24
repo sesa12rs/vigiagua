@@ -1418,15 +1418,16 @@
           + '<td style="padding:6px 8px;"><span style="color:#15803d;">✓ criada</span></td>'
           + '<td style="padding:6px 8px;color:var(--slate-500);">' + (reg.email || '') + '</td>'
           + '<td style="padding:6px 8px;text-align:right;white-space:nowrap;">'
-          + '<button class="btn btn--ghost btn--sm" onclick="abrirTrocarEmail(\'' + reg.id + '\',\'12ª Regional\',\'' + emailReg + '\')">✉️ Trocar e-mail</button> '
+          + (window.VIGIAGUA_EMAIL_REAL ? '<button class="btn btn--ghost btn--sm" onclick="abrirTrocarEmail(\'' + reg.id + '\',\'12ª Regional\',\'' + emailReg + '\')">✉️ Trocar e-mail</button> ' : '')
           + '<button class="btn btn--ghost btn--sm" onclick="resetarSenhaUsuario(\'' + reg.id + '\',\'12ª Regional\')">🔑 Resetar senha</button>'
           + '</td></tr>';
       }
       municipios.forEach(m=>{
         const c=porNome[m.nome];
         const nomeJs=m.nome.replace(/'/g,"\\'");
+        const podeEmail = !!window.VIGIAGUA_EMAIL_REAL;
         const acao = c
-          ? '<button class="btn btn--ghost btn--sm" onclick="abrirTrocarEmail(\''+c.id+'\',\''+nomeJs+'\',\''+(c.email||'')+'\')">✉️ Trocar e-mail</button> '
+          ? (podeEmail ? '<button class="btn btn--ghost btn--sm" onclick="abrirTrocarEmail(\''+c.id+'\',\''+nomeJs+'\',\''+(c.email||'')+'\')">✉️ Trocar e-mail</button> ' : '')
             +'<button class="btn btn--ghost btn--sm" onclick="resetarSenhaUsuario(\''+c.id+'\',\''+nomeJs+'\')">🔑 Resetar senha</button>'
           : '<button class="btn btn--secondary btn--sm" onclick="abrirCriarConta(\''+nomeJs+'\','+m.id+')">➕ Criar conta</button>';
         html+='<tr style="border-bottom:1px solid var(--slate-100);"><td style="padding:6px 8px;font-weight:600;color:var(--slate-800);">'+m.nome+'</td>'
@@ -1440,15 +1441,18 @@
     function abrirCriarConta(nome, municipioId) {
       _contaCtx = { nome:nome, municipioId:municipioId };
       const emailAuto=_emailAuto(nome), temp=DB.Admin.gerarSenhaTemp();
+      const emailBloco = window.VIGIAGUA_EMAIL_REAL
+        ? ('<label style="font-size:13px;font-weight:600;">E-mail do município</label>'
+           +'<div style="margin:6px 0 12px;font-size:13px;">'
+           +'<label style="display:block;margin-bottom:6px;"><input type="radio" name="mcEmailModo" value="auto" checked onchange="_mcAtualizaEmail()"> Automático: <span id="mcEmailAuto" style="font-family:monospace;">'+emailAuto+'</span></label>'
+           +'<label style="display:block;"><input type="radio" name="mcEmailModo" value="real" onchange="_mcAtualizaEmail()"> Informar e-mail real (permite recuperação por e-mail):</label>'
+           +'<input type="email" id="mcEmailReal" placeholder="email@dominio.com" disabled style="width:100%;margin-top:6px;padding:7px 9px;border:1px solid var(--slate-300);border-radius:8px;">'
+           +'</div>')
+        : ('<div style="margin:0 0 12px;font-size:13px;">E-mail: <span id="mcEmailAuto" style="font-family:monospace;">'+emailAuto+'</span></div>');
       document.getElementById('mcTitulo').textContent='Criar conta — '+nome;
       document.getElementById('mcBody').innerHTML=
         '<div id="mcMsg" style="display:none;margin-bottom:10px;padding:8px 10px;border-radius:6px;font-size:12.5px;"></div>'
-        +'<label style="font-size:13px;font-weight:600;">E-mail do município</label>'
-        +'<div style="margin:6px 0 12px;font-size:13px;">'
-        +'<label style="display:block;margin-bottom:6px;"><input type="radio" name="mcEmailModo" value="auto" checked onchange="_mcAtualizaEmail()"> Automático: <span id="mcEmailAuto" style="font-family:monospace;">'+emailAuto+'</span></label>'
-        +'<label style="display:block;"><input type="radio" name="mcEmailModo" value="real" onchange="_mcAtualizaEmail()"> Informar e-mail real (permite recuperação por e-mail):</label>'
-        +'<input type="email" id="mcEmailReal" placeholder="email@dominio.com" disabled style="width:100%;margin-top:6px;padding:7px 9px;border:1px solid var(--slate-300);border-radius:8px;">'
-        +'</div>'
+        +emailBloco
         +'<label style="font-size:13px;font-weight:600;">Senha temporária</label>'
         +'<input type="text" id="mcSenha" value="'+temp+'" style="width:100%;margin:6px 0 4px;padding:7px 9px;border:1px solid var(--slate-300);border-radius:8px;font-family:monospace;">'
         +'<p style="font-size:12px;color:var(--slate-500);margin:0;">Repasse esta senha ao município. Ele definirá a senha dele no 1º acesso.</p>';
@@ -1463,7 +1467,8 @@
     }
     function _mcMsg(t,erro){ const m=document.getElementById('mcMsg'); if(!m) return; m.textContent=t; m.style.display='block'; m.style.background=erro?'#fef2f2':'#f0fdf4'; m.style.color=erro?'#b91c1c':'#15803d'; }
     async function confirmarCriarConta() {
-      const modo=document.querySelector('input[name="mcEmailModo"]:checked').value;
+      const modoEl=document.querySelector('input[name="mcEmailModo"]:checked');
+      const modo=modoEl?modoEl.value:'auto';
       const email=(modo==='real'?document.getElementById('mcEmailReal').value:document.getElementById('mcEmailAuto').textContent).trim().toLowerCase();
       const senha=document.getElementById('mcSenha').value;
       if(!/.+@.+\..+/.test(email)){ _mcMsg('Informe um e-mail válido.', true); return; }

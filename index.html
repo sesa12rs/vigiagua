@@ -254,6 +254,9 @@
         html += `<option value="${_emailDoNome(m.nome)}">🏘️ ${m.nome}</option>`;
       });
       sel.innerHTML = html;
+      // O login por e-mail só aparece com o recurso de e-mail real ativo (window.VIGIAGUA_EMAIL_REAL)
+      const tog = document.getElementById('toggleLoginModo');
+      if (tog) tog.style.display = window.VIGIAGUA_EMAIL_REAL ? '' : 'none';
     }
     popularSeletorLogin();
 

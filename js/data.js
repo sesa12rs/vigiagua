@@ -16,7 +16,12 @@
  */
 
 if (typeof window !== 'undefined') {
-  window.VIGIAGUA_VERSAO = 'fase2-v88';
+  window.VIGIAGUA_VERSAO = 'fase2-v89';
+  // Recurso de e-mail real dos municípios: login "entrar com e-mail", botão
+  // "Trocar e-mail" no painel e a opção de e-mail real ao criar conta.
+  // false = oculto/desativado (municípios usam só o e-mail automático + login pela lista).
+  // Para REATIVAR no futuro, troque para true — não precisa mexer em mais nada.
+  window.VIGIAGUA_EMAIL_REAL = false;
   try { console.log('%c[VigiÁgua] versão ' + window.VIGIAGUA_VERSAO, 'color:#1e40af;font-weight:bold'); } catch (e) {}
 }
 
