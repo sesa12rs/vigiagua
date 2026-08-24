@@ -1,1 +1,17 @@
+name: Keep Supabase Alive
 
+on:
+  schedule:
+    # Roda toda quarta-feira às 08:00 UTC (ajuste como preferir)
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: # Permite rodar manualmente pelo painel do GitHub
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send request to Supabase
+        run: |
+          curl -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/" \
+          -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
